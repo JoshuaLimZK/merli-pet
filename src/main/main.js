@@ -2,7 +2,7 @@
 import { app, ipcMain, BrowserWindow, screen } from "electron";
 import dotenv from "dotenv";
 import { uIOhook, UiohookKey } from "uiohook-napi";
-import { getWallpaper,setWallpaper } from "wallpaper";
+import { getWallpaper, setWallpaper } from "wallpaper";
 
 // Load environment variables
 dotenv.config();
@@ -48,7 +48,10 @@ async function checkWallpaperAvailable() {
         await getWallpaper();
         return true;
     } catch (err) {
-        console.warn("Wallpaper support unavailable:", err && err.message ? err.message : err);
+        console.warn(
+            "Wallpaper support unavailable:",
+            err && err.message ? err.message : err,
+        );
         return false;
     }
 }
@@ -284,12 +287,14 @@ function startPetUpdateLoop() {
                 }
             }
 
-            if (didTransition && Math.random() < 0.975) {
-
+            if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
                 (async () => {
                     try {
                         const currentWallpaper = await getWallpaper();
-                        const newWallpaper = path.join(__dirname, "../assets/lky.jpg");
+                        const newWallpaper = path.join(
+                            __dirname,
+                            "../assets/lky.jpg",
+                        );
                         await setWallpaper(newWallpaper);
                         console.log("Wallpaper changed to:", newWallpaper);
 
@@ -298,7 +303,10 @@ function startPetUpdateLoop() {
                                 await setWallpaper(currentWallpaper);
                                 console.log("Wallpaper reverted to original.");
                             } catch (err) {
-                                console.error("Failed to revert wallpaper:", err);
+                                console.error(
+                                    "Failed to revert wallpaper:",
+                                    err,
+                                );
                             }
                         }, 1000);
                     } catch (err) {
