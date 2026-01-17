@@ -89,7 +89,7 @@ function startPetUpdateLoop() {
 
             const didTransition = checkStateTransition();
 
-            if (didTransition && Math.random() < 0.5) {
+            if (didTransition && Math.random() < 0.075) {
                 transitionToState("imageDragIn", false, 10000);
                 console.log("Dragging in random image due to state transition");
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
@@ -184,12 +184,24 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
 
     const dragInImageLoop = setInterval(() => {
         const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
-        petMoveTo(petWindow, targetX, targetY, 3);
-        if (
-            petWindowCurrentX - targetX < 0.5 &&
-            petWindowCurrentY - targetY < 0.5
-        ) {
+        let moved = petMoveTo(petWindow, targetX, targetY, 3);
+        if (!moved) {
             slideInFromRight(imageDragWindow, 400, 400, 3);
+            const pullOutLoop = setInterval(() => {
+                const { x: petWindowCurrentX, y: petWindowCurrentY } =
+                    getPetPosition();
+                let movedBack = petMoveTo(
+                    petWindow,
+                    screen.getPrimaryDisplay().workAreaSize.width - 400,
+                    screen.getPrimaryDisplay().workAreaSize.height / 2,
+                    3,
+                );
+                if (!movedBack) {
+                    clearInterval(pullOutLoop);
+                    transitionToState("idle", false, 5000);
+                    startPetUpdateLoop();
+                }
+            }, 10);
             clearInterval(dragInImageLoop);
         }
     }, 10);
