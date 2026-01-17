@@ -18,6 +18,7 @@ const {
 } = require("./state/petBehavior");
 const { createImageDragWindow } = require("./windows/image-drag-in/main");
 const { dragInRandomImage } = require("./systems/imageDragInSystem");
+const path = require("path");
 // ======================
 // OpenAI Module
 // ======================
@@ -282,6 +283,12 @@ app.whenReady().then(() => {
     let imageDragWindow = createImageDragWindow();
     slideInFromRight(imageDragWindow, 400, 400, 10);
     startPetUpdateLoop();
+    // create bus window
+    const busWindow = new BrowserWindow({
+        width: 400,
+        height: 300,
+    });
+    busWindow.loadFile(path.join(__dirname, "../../renderer/bus/index.html"));
 });
 
 app.on("window-all-closed", () => {
