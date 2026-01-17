@@ -112,21 +112,32 @@ export async function loadPetModel(scene, modelSize) {
 
         // Find and set up the blinking animation as additive
         const blinkClip = gltf.animations.find(
-            (clip) => clip.name.toLowerCase() === "Blink",
+            (clip) => clip.name.toLowerCase() === "blink",
         );
 
         if (blinkClip) {
-            actions.blink = mixer.clipAction(blinkClip);
-            actions.blink.blendMode = THREE.AdditiveAnimationBlendMode;
-            actions.blink.setLoop(THREE.LoopRepeat, Infinity);
-            actions.blink.play();
-            console.log(
-                `Loaded additive blinking animation "${blinkClip.name}"`,
-            );
+            const blinkAction = mixer.clipAction(blinkClip);
+            blinkAction.setLoop(THREE.LoopOnce, 1);
+            blinkAction.clampWhenFinished = true;
+            blinkAction.weight = 1.0;
+            actions.blink = blinkAction;
+            blinkFunction();
         }
     }
 
     return { model, mixer, actions };
+
+    function blinkFunction() {
+        const delay = Math.random() * 5 + 2; // Random delay between 2 to 7 seconds
+        setTimeout(() => {
+            const blinkAction = actions.blink;
+            if (blinkAction) {
+                blinkAction.reset();
+                blinkAction.play();
+            }
+            blinkFunction();
+        }, delay * 1000);
+    }
 }
 
 /**
