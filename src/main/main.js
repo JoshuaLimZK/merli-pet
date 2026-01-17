@@ -136,7 +136,7 @@ function startPetUpdateLoop() {
 
             const didTransition = checkStateTransition();
 
-            if (didTransition && Math.random() < 0.075) {
+            if (didTransition && Math.random() < 0.9) {
                 transitionToState("imageDragIn", false, 10000);
                 console.log("Dragging in random image due to state transition");
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
@@ -237,21 +237,24 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
         let moved = petMoveTo(petWindow, targetX, targetY, 3);
         if (!moved) {
             slideInFromRight(imageDragWindow, 400, 400, 3, targetY - 200);
-            const pullOutLoop = setInterval(() => {
-                const { x: petWindowCurrentX, y: petWindowCurrentY } =
-                    getPetPosition();
-                let movedBack = petMoveTo(
-                    petWindow,
-                    screen.getPrimaryDisplay().workAreaSize.width - 400,
-                    targetY,
-                    3,
-                );
-                if (!movedBack) {
-                    clearInterval(pullOutLoop);
-                    transitionToState("idle", false, 5000);
-                    startPetUpdateLoop();
-                }
-            }, 10);
+            const pullOutLoop = setInterval(
+                () => {
+                    const { x: petWindowCurrentX, y: petWindowCurrentY } =
+                        getPetPosition();
+                    let movedBack = petMoveTo(
+                        petWindow,
+                        screen.getPrimaryDisplay().workAreaSize.width - 400,
+                        targetY,
+                        3,
+                    );
+                    if (!movedBack) {
+                        clearInterval(pullOutLoop);
+                        transitionToState("idle", false, 5000);
+                        startPetUpdateLoop();
+                    }
+                },
+                Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
+            );
             clearInterval(dragInImageLoop);
         }
     }, 10);
@@ -275,7 +278,7 @@ function slideInFromRight(
     window,
     width,
     height,
-    speed = 2,
+    speed = 3,
     y = Math.floor(
         screen.getPrimaryDisplay().workAreaSize.height / 2 - height / 2,
     ),
@@ -287,11 +290,12 @@ function slideInFromRight(
     window.show();
     const interval = setInterval(
         () => {
-            let curx,
-                y = window.getPosition();
-            if (curx > screen.getPrimaryDisplay().workAreaSize.width - width) {
-                curx -= speed;
-                window.setPosition(x, y);
+            const [curX, curY] = window.getPosition();
+            const targetX =
+                screen.getPrimaryDisplay().workAreaSize.width - width;
+            if (curX > targetX) {
+                const nextX = Math.max(curX - speed, targetX);
+                window.setPosition(nextX, curY);
             } else {
                 clearInterval(interval);
             }
