@@ -31,6 +31,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 
+// @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // ======================
@@ -317,14 +318,16 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
                 path.extname(file).toLowerCase(),
             ),
         );
-    const randomMemFile =
-        memFiles[Math.floor(Math.random() * memFiles.length)];
+    const randomMemFile = memFiles[Math.floor(Math.random() * memFiles.length)];
     const randomMemPath = path.join(memsDir, randomMemFile);
     console.log("Selected random image:", randomMemPath);
 
     console.log("Dragging in image:", randomMemPath);
     imageDragWindow.on("ready-to-show", () => {
-        imageDragWindow.webContents.send("image-url", `file://${randomMemPath}`);
+        imageDragWindow.webContents.send(
+            "image-url",
+            `file://${randomMemPath}`,
+        );
     });
 
     const targetX = screen.getPrimaryDisplay().workAreaSize.width;
