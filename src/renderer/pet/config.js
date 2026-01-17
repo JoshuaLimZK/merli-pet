@@ -2,7 +2,7 @@
  * Pet 3D model configuration (immutable)
  */
 export const PET_CONFIG = {
-    MODEL_SIZE: 2,
+    MODEL_SIZE: 1.5,
     ROTATION_LERP_SPEED: 0.07,
     ROTATION_LERP_SPEED_CLOSE: 0.15,
 };

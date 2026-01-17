@@ -96,7 +96,7 @@ function updatemodel(petWindow) {
                 deltaYMouseToWindow,
             );
             break;
-        case "wander":
+        case "wander": {
             const { x: wanderTargetX, y: wanderTargetY } =
                 petBehavior.wanderTarget || {
                     x: petWindowCurrentX,
@@ -109,6 +109,7 @@ function updatemodel(petWindow) {
                 deltaYWanderToWindow,
             );
             break;
+        }
     }
     let distanceMouseToWindow = Math.hypot(
         deltaXMouseToWindow,
@@ -191,7 +192,6 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
     let deltaXToTarget = targetX - petWindowCurrentX;
     let deltaYToTarget = targetY - petWindowCurrentY;
     let distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
-    let angleToTarget = Math.atan2(deltaXToTarget, deltaYToTarget);
 
     if (distanceToTarget > 0) {
         const directionX = deltaXToTarget / distanceToTarget;
@@ -213,7 +213,13 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
         const petWindowX = Math.round(newX - PET_WINDOW.SIZE / 2);
         const petWindowY = Math.round(newY - PET_WINDOW.SIZE / 2);
 
-        petWindow.setPosition(petWindowX, petWindowY, false);
+        // Use setBounds instead of setPosition to prevent window size drift on Windows
+        petWindow.setBounds({
+            x: petWindowX,
+            y: petWindowY,
+            width: PET_WINDOW.SIZE,
+            height: PET_WINDOW.SIZE,
+        });
     }
 }
 

@@ -1,29 +1,49 @@
 //@ts-check
 import * as THREE from "three";
 // @ts-expect-error - No types available
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-
-const fbxLoader = new FBXLoader();
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 /**
- * Load an FBX file and return a promise
- * @param {string} path - Path to the FBX file
- * @returns {Promise<THREE.Group>}
+ * @typedef {import('three/examples/jsm/loaders/GLTFLoader.js').GLTF} GLTF
  */
-export function loadFBX(path) {
+
+/**
+ * @typedef {Object} PetActions
+ * @property {THREE.AnimationAction} [idle] - Idle animation action
+ * @property {THREE.AnimationAction} [walk] - Walk animation action
+ * @property {THREE.AnimationAction} [float] - Float animation action
+ */
+
+/**
+ * @typedef {Object} PetModelResult
+ * @property {THREE.Group} model - The loaded 3D model
+ * @property {THREE.AnimationMixer} mixer - Animation mixer for the model
+ * @property {PetActions} actions - Animation actions mapped by name
+ */
+
+/** @type {GLTFLoader} */
+const gltfLoader = new GLTFLoader();
+
+/**
+ * Load a GLB/GLTF file and return a promise
+ * @param {string} path - Path to the GLB file
+ * @returns {Promise<GLTF>}
+ */
+export function loadGLB(path) {
     return new Promise((resolve, reject) => {
-        fbxLoader.load(
+        gltfLoader.load(
             path,
             /**
-             * @param {THREE.Group} fbx
+             *
+             * @param {GLTF} gltf
+             * @returns
              */
-            (fbx) => resolve(fbx),
-            /**
-             * @param {ProgressEvent<EventTarget>} xhr
-             */
+            (gltf) => resolve(gltf),
             undefined,
             /**
-             * @param {ErrorEvent} error
+             *
+             * @param {Error} error
+             * @returns
              */
             (error) => reject(error),
         );
@@ -34,6 +54,7 @@ export function loadFBX(path) {
  * Center and scale a model to fit within a target size
  * @param {THREE.Object3D} model - The model to scale
  * @param {number} targetSize - The target size for the largest dimension
+ * @returns {void}
  */
 export function centerAndScaleModel(model, targetSize) {
     const box = new THREE.Box3().setFromObject(model);
@@ -52,43 +73,39 @@ export function centerAndScaleModel(model, targetSize) {
  * Load the pet model with all animations
  * @param {THREE.Scene} scene - The scene to add the model to
  * @param {number} modelSize - Target size for the model
- * @returns {Promise<{model: THREE.Group, mixer: THREE.AnimationMixer, actions: Object}>}
+ * @returns {Promise<PetModelResult>}
  */
 export async function loadPetModel(scene, modelSize) {
-    // Load the idle model (contains the mesh)
-    const idleModel = await loadFBX("../../assets/Maria@Idle.fbx");
+    // Load the Merli GLB model
+    const gltf = await loadGLB("../../assets/Merli.glb");
+    const model = gltf.scene;
 
     // Center and scale the model
-    centerAndScaleModel(idleModel, modelSize);
-    scene.add(idleModel);
+    centerAndScaleModel(model, modelSize);
+    scene.add(model);
 
     // Create animation mixer
-    const mixer = new THREE.AnimationMixer(idleModel);
+    const mixer = new THREE.AnimationMixer(model);
+    /** @type {PetActions} */
     const actions = {};
 
-    // Add idle animation
-    if (idleModel.animations && idleModel.animations.length > 0) {
-        actions.idle = mixer.clipAction(idleModel.animations[0]);
+    // Find the walking animation and use it for all actions
+    if (gltf.animations && gltf.animations.length > 0) {
+        const walkingClip =
+            gltf.animations.find(
+                (clip) => clip.name.toLowerCase() === "walking",
+            ) || gltf.animations[0];
+
+        // Map the walking animation to all action types
+        actions.idle = mixer.clipAction(walkingClip);
+        actions.walk = mixer.clipAction(walkingClip);
+        actions.float = mixer.clipAction(walkingClip);
+
+        console.log(`Loaded animation "${walkingClip.name}" for all actions`);
+
+        // Start with idle (which is walking)
+        actions.idle.play();
     }
 
-    // Load walk animation
-    try {
-        const walkModel = await loadFBX("../../assets/Maria@Walk.fbx");
-        if (walkModel.animations && walkModel.animations.length > 0) {
-            actions.walk = mixer.clipAction(walkModel.animations[0]);
-        }
-    } catch (error) {
-        console.error("Error loading walk animation:", error);
-    }
-
-    try {
-        const floatModel = await loadFBX("../../assets/Maria@Float.fbx");
-        if (floatModel.animations && floatModel.animations.length > 0) {
-            actions.float = mixer.clipAction(floatModel.animations[0]);
-        }
-    } catch (error) {
-        console.error("Error loading float animation:", error);
-    }
-
-    return { model: idleModel, mixer, actions };
+    return { model, mixer, actions };
 }
