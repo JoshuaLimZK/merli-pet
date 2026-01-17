@@ -1,4 +1,3 @@
-// @ts-check
 import { app, ipcMain, BrowserWindow, screen } from "electron";
 import dotenv from "dotenv";
 
@@ -25,6 +24,7 @@ import {
 import { createImageDragWindow } from "./windows/image-drag-in/main.js";
 import { dragInRandomImage } from "./systems/imageDragInSystem.js";
 import path from "path";
+import * as quoteWindow from "./windows/quote/main.js";
 // ======================
 // OpenAI Module
 // ======================
@@ -44,6 +44,48 @@ import path from "path";
 ipcMain.handle("get-pet-config", () => {
     return PET_WINDOW;
 });
+const quotes = [
+    "The only way to do great work is to love what you do. - Steve Jobs",
+    "Life is what happens when you're busy making other plans. - John Lennon",
+    "The purpose of our lives is to be happy. - Dalai Lama",
+    "Get busy living or get busy dying. - Stephen King",
+    "You have within you right now, everything you need to deal with whatever the world can throw at you. - Brian Tracy",
+    "Believe you can and you're halfway there. - Theodore Roosevelt",
+    "The best way to predict the future is to invent it. - Alan Kay",
+    "Your time is limited, so don't waste it living someone else's life. - Steve Jobs",
+    "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
+    "Do not watch the clock. Do what it does. Keep going. - Sam Levenson",
+];
+
+// Function to send a random quote to the renderer process
+function sendRandomQuote(quote=null) {
+    let quoteW = quoteWindow.createQuoteWindow(getPetWindow());
+    let randomQuote;
+    if(!quote){
+    randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    }else{
+        randomQuote=quote;
+    }
+    console.log("Sending quote:", randomQuote);
+    quoteW.on("ready-to-show", () => {
+        quoteW.webContents.send("random-quote", randomQuote);
+    });
+    let petWindow = getPetWindow();
+
+    let interval=setInterval(() => {
+            quoteW.setPosition(
+                petWindow.getBounds().x + petWindow.getBounds().width - 50,
+                petWindow.getBounds().y - 50,// + petWindow.getBounds().height,
+                false,
+            );
+        }, Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
+    );
+    setTimeout(() => {
+        clearInterval(interval);
+        quoteW.close();
+        
+    }, 5000);
+}
 function onFollow(petWindow) {
     const mousePosition = screen.getCursorScreenPoint();
     const mousePositionX = mousePosition.x;
@@ -246,13 +288,15 @@ function slideInFromRight(
     window.setSize(width, height);
     window.show();
     const interval = setInterval(() => {
-        if (x > screen.getPrimaryDisplay().workAreaSize.width - width) {
-            x -= speed;
+        let curx, y = window.getPosition();
+        if (curx > screen.getPrimaryDisplay().workAreaSize.width - width) {
+            curx -= speed;
             window.setPosition(x, y);
         } else {
             clearInterval(interval);
         }
-    }, 10);
+    }, 
+        Math.floor(1000 / PET_WINDOW.UPDATE_FPS));
 }
 
 // ======================
@@ -275,13 +319,9 @@ app.whenReady().then(() => {
     createPetWindow(!app.isPackaged);
     let imageDragWindow = createImageDragWindow();
     slideInFromRight(imageDragWindow, 400, 400, 10);
+
+    sendRandomQuote("In my ass there is a rock")
     startPetUpdateLoop();
-    // create bus window
-    const busWindow = new BrowserWindow({
-        width: 400,
-        height: 300,
-    });
-    busWindow.loadFile(path.join(__dirname, "../../renderer/bus/index.html"));
 });
 
 app.on("window-all-closed", () => {
