@@ -27,6 +27,12 @@ import { createImageDragWindow } from "./windows/image-drag-in/main.js";
 import { transitionToState } from "./state/petBehavior.js";
 
 import * as quoteWindow from "./windows/quote/main.js";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // ======================
 // OpenAI Module
 // ======================
@@ -302,6 +308,24 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
 function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
     if (!petWindow || petWindow.isDestroyed()) return;
     clearInterval(mainLoop);
+    // get random image from assets/mems
+    const memsDir = path.join(__dirname, "../assets/mems");
+    const memFiles = fs
+        .readdirSync(memsDir)
+        .filter((file) =>
+            [".png", ".jpg", ".jpeg", ".gif", ".bmp"].includes(
+                path.extname(file).toLowerCase(),
+            ),
+        );
+    const randomMemFile =
+        memFiles[Math.floor(Math.random() * memFiles.length)];
+    const randomMemPath = path.join(memsDir, randomMemFile);
+    console.log("Selected random image:", randomMemPath);
+
+    console.log("Dragging in image:", randomMemPath);
+    imageDragWindow.on("ready-to-show", () => {
+        imageDragWindow.webContents.send("image-url", `file://${randomMemPath}`);
+    });
 
     const targetX = screen.getPrimaryDisplay().workAreaSize.width;
     const targetY = Math.floor(
