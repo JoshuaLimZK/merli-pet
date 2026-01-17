@@ -278,12 +278,30 @@ function startPetUpdateLoop() {
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
             } else if (didTransition && petBehavior.state === "idle") {
                 if (process.platform === "darwin") {
-                    exec(
-                        "osascript -e 'tell application \"Spotify\" to get player state'",
-                        (err, stdout) => {
-                            console.log("Current state:", stdout.trim()); // returns "playing" or "paused"
-                        },
-                    );
+                    setInterval(() => {
+                        const script = `
+    tell application "Spotify"
+        if player state is playing then
+            return "playing"
+        else
+            return "paused"
+        end if
+    end tell
+  `;
+                        exec(
+                            `osascript -e '${script}'`,
+                            (error, stdout, stderr) => {
+                                if (error) {
+                                    console.error(
+                                        `Error checking music state: ${error.message}`,
+                                    );
+                                    return;
+                                }
+                                const state = stdout.trim();
+                                console.log(`Music is ${state}`);
+                            },
+                        );
+                    }, 2000);
                 }
             }
 
