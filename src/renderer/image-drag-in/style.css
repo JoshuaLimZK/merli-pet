@@ -1,0 +1,11 @@
+img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+body {
+    app-region: drag;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

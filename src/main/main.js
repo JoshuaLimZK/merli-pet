@@ -16,6 +16,7 @@ const {
     onStateChange,
     checkStateTransition,
 } = require("./state/petBehavior");
+const { createImageDragWindow } = require("./windows/image-drag-in/main");
 
 // ======================
 // OpenAI Module
@@ -155,6 +156,44 @@ function startPetUpdateLoop() {
 }
 
 // ======================
+// Window slide in function from right
+// ======================
+
+/**
+ * Animates a window sliding in from the right side of the screen.
+ * @param {Electron.BrowserWindow} window - The window to animate
+ * @param {number} width - The target width of the window in pixels
+ * @param {number} height - The target height of the window in pixels
+ * @param {number} [speed=2] - The animation speed in pixels per frame
+ * @param {number} [y=Math.floor(screen.getPrimaryDisplay().workAreaSize.height / 2 - height / 2)] - The vertical position of the window in pixels
+ * @returns {void}
+ */
+
+function slideInFromRight(
+    window,
+    width,
+    height,
+    speed = 2,
+    y = Math.floor(
+        screen.getPrimaryDisplay().workAreaSize.height / 2 - height / 2,
+    ),
+) {
+    let x = screen.getPrimaryDisplay().workAreaSize.width;
+    window.setSize(0, height);
+    window.setPosition(x, y);
+    window.setSize(width, height);
+    window.show();
+    const interval = setInterval(() => {
+        if (x > screen.getPrimaryDisplay().workAreaSize.width - width) {
+            x -= speed;
+            window.setPosition(x, y);
+        } else {
+            clearInterval(interval);
+        }
+    }, 10);
+}
+
+// ======================
 // App Handlers
 // e.g, State Change, Event Management
 // ======================
@@ -172,7 +211,8 @@ onStateChange((newState) => {
 // ======================
 app.whenReady().then(() => {
     createPetWindow(!app.isPackaged);
-
+    let imageDragWindow = createImageDragWindow();
+    slideInFromRight(imageDragWindow, 400, 400, 10);
     startPetUpdateLoop();
 });
 
