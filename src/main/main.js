@@ -31,7 +31,7 @@ import * as quoteWindow from "./windows/quote/main.js";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
-import { get } from "http";
+import { createAdminWindow } from "./windows/admin/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -107,6 +107,35 @@ ipcMain.handle("get-pet-config", () => {
     return PET_WINDOW;
 });
 
+/** @type {BrowserWindow | null} */
+let adminWindow = null;
+
+// Admin state control handler
+ipcMain.on("admin-set-state", (_event, state) => {
+    console.log("Admin requested state change:", state);
+
+    if (state === "imageDragIn") {
+        const petWindow = getPetWindow();
+        if (petWindow) {
+            transitionToState("imageDragIn", false, 10000);
+            dragInRandomImage(petWindow, createImageDragWindow(), null);
+        }
+    } else {
+        transitionToState(state, false, 10000);
+    }
+
+    // Notify admin window of the state change
+    if (adminWindow && !adminWindow.isDestroyed()) {
+        adminWindow.webContents.send("admin-state-changed", state);
+    }
+});
+
+// Admin quote trigger handler
+ipcMain.on("admin-trigger-quote", () => {
+    console.log("Admin triggered random quote");
+    sendRandomQuote();
+});
+
 /** @type {string[]} */
 const quotes = [
     "The only way to do great work is to love what you do. - Steve Jobs",
@@ -141,20 +170,28 @@ function sendRandomQuote(quote = null) {
         quoteW.webContents.send("random-quote", randomQuote);
     });
 
+    // Store original size to prevent drift
+    const quoteWidth = 300;
+    const quoteHeight = 100;
+
     let interval = setInterval(
         () => {
-            const quoteBounds = quoteW.getBounds();
+            if (quoteW.isDestroyed()) {
+                clearInterval(interval);
+                return;
+            }
             quoteW.setBounds({
                 x: petWindow.getBounds().x + petWindow.getBounds().width - 50,
                 y: petWindow.getBounds().y - 50,
-                width: quoteBounds.width,
-                height: quoteBounds.height,
+                width: quoteWidth,
+                height: quoteHeight,
             });
         },
         Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
     );
     setTimeout(() => {
         clearInterval(interval);
+        if (quoteW.isDestroyed()) return;
         quoteW.close();
     }, 5000);
 }
@@ -357,12 +394,12 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
  * Drags in a random image from the right side of the screen
  * @param {Electron.BrowserWindow} petWindow - The pet window
  * @param {Electron.BrowserWindow} imageDragWindow - The image drag window
- * @param {NodeJS.Timeout} mainLoop - The main update loop interval to pause
+ * @param {NodeJS.Timeout | null} mainLoop - The main update loop interval to pause (optional)
  * @returns {void}
  */
 function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
     if (!petWindow || petWindow.isDestroyed()) return;
-    clearInterval(mainLoop);
+    if (mainLoop) clearInterval(mainLoop);
     // get random image from assets/mems
     const memsDir = path.join(__dirname, "../assets/mems");
     const memFiles = fs
@@ -467,6 +504,11 @@ onStateChange((newState) => {
     petWindow.webContents.send("behavior-state-change", {
         state: newState,
     });
+
+    // Also notify admin window
+    if (adminWindow && !adminWindow.isDestroyed()) {
+        adminWindow.webContents.send("admin-state-changed", newState);
+    }
 });
 
 // ======================
@@ -481,6 +523,7 @@ app.whenReady().then(() => {
     petWindow.once("ready-to-show", () => {
         startPetUpdateLoop();
     });
+    adminWindow = createAdminWindow();
     sendRandomQuote("In my ass there is a rock");
 });
 
