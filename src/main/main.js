@@ -266,15 +266,19 @@ function musicCheckMac() {
         end if
     end tell
   `;
-    let state = "paused";
-    exec(`osascript -e '${script}'`, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error checking music state: ${error.message}`);
-            return;
-        }
-        state = stdout.trim();
+    return new Promise((resolve) => {
+        exec(`osascript -e '${script}'`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error checking music state: ${error.message}`);
+                resolve(false);
+                return;
+            }
+            if (stderr && stderr.trim()) {
+                console.warn(`Music state warning: ${stderr.trim()}`);
+            }
+            resolve(stdout.trim() === "playing");
+        });
     });
-    return state === "playing" ? true : false;
 }
 
 // ======================
@@ -352,17 +356,19 @@ function startPetUpdateLoop() {
                     if (newIdleState) {
                         if (process.platform === "darwin") {
                             idleMusicInterval = setInterval(() => {
-                                let musicPlaying = musicCheckMac();
-                                if (musicPlaying) {
-                                    petWindow.webContents.send(
-                                        "play-idle-music",
-                                    );
-                                } else {
-                                    petWindow.webContents.send(
-                                        "stop-idle-music",
-                                    );
-                                }
-                            }, 2000);
+                                musicCheckMac().then((musicPlaying) => {
+                                    console.log("Music playing:", musicPlaying);
+                                    if (musicPlaying) {
+                                        petWindow.webContents.send(
+                                            "play-idle-music",
+                                        );
+                                    } else {
+                                        petWindow.webContents.send(
+                                            "stop-idle-music",
+                                        );
+                                    }
+                                });
+                            }, 1000);
                         }
                     }
                     newIdleState = false;
