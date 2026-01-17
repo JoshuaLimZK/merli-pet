@@ -150,8 +150,11 @@ function onWander(petWindow) {
         return;
     }
 }
+import { exec } from "child_process";
+
 function onIdle(petWindow) {
     const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
+
     petMoveTo(petWindow, petWindowCurrentX, petWindowCurrentY, 0);
 }
 
@@ -164,12 +167,21 @@ function startPetUpdateLoop() {
             const petWindow = getPetWindow();
             if (!petWindow) return;
 
-            const didTransition = checkStateTransition();
+            let didTransition = checkStateTransition();
 
-            if (didTransition && Math.random() < 0.9) {
+            if (didTransition && Math.random() < 0.075) {
                 transitionToState("imageDragIn", false, 10000);
                 console.log("Dragging in random image due to state transition");
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
+            } else if (didTransition && petBehavior.state === "idle") {
+                if (process.platform === "darwin") {
+                    exec(
+                        "osascript -e 'tell application \"Spotify\" to get player state'",
+                        (err, stdout) => {
+                            console.log("Current state:", stdout.trim()); // returns "playing" or "paused"
+                        },
+                    );
+                }
             }
 
             switch (petBehavior.state) {
