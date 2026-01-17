@@ -15,10 +15,11 @@ export function createImageDragWindow() {
     const imageDragWindow = new BrowserWindow({
         width: 0,
         height: 400,
-        frame: true,
+        frame: false,
         transparent: false,
         movable: true,
         title: "Meme",
+        draggable: true,
         x: Math.floor(screen.getPrimaryDisplay().workAreaSize.width),
         y: Math.floor(
             (screen.getPrimaryDisplay().workAreaSize.height - 400) / 2,

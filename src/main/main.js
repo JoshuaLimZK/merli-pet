@@ -475,23 +475,34 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
         );
     });
 
-    const targetX = screen.getPrimaryDisplay().workAreaSize.width;
+    const targetX =
+        screen.getPrimaryDisplay().workAreaSize.width -
+        Math.floor(
+            Math.random() * (screen.getPrimaryDisplay().workAreaSize.width / 2),
+        );
     const targetY = Math.floor(
         Math.random() * screen.getPrimaryDisplay().workAreaSize.height,
     );
 
     const dragInImageLoop = setInterval(() => {
-        let moved = petMoveTo(petWindow, targetX, targetY, 3);
+        let moved = petMoveTo(
+            petWindow,
+            screen.getPrimaryDisplay().workAreaSize.width,
+            targetY,
+            3,
+        );
         if (!moved) {
-            slideInFromRight(imageDragWindow, 400, 400, 3, targetY - 200);
+            slideInFromRight(
+                imageDragWindow,
+                400,
+                400,
+                3,
+                targetY - 200,
+                targetX,
+            );
             const pullOutLoop = setInterval(
                 () => {
-                    let movedBack = petMoveTo(
-                        petWindow,
-                        screen.getPrimaryDisplay().workAreaSize.width - 400,
-                        targetY,
-                        3,
-                    );
+                    let movedBack = petMoveTo(petWindow, targetX, targetY, 3);
                     if (!movedBack) {
                         clearInterval(pullOutLoop);
                         transitionToState("idle", false, 5000);
@@ -527,16 +538,25 @@ function slideInFromRight(
     y = Math.floor(
         screen.getPrimaryDisplay().workAreaSize.height / 2 - height / 2,
     ),
+    x = 0,
 ) {
-    let x = screen.getPrimaryDisplay().workAreaSize.width;
-    window.setBounds({ x, y, width: 0, height });
-    window.setBounds({ x, y, width, height });
+    window.setBounds({
+        x: screen.getPrimaryDisplay().workAreaSize.width,
+        y,
+        width: 0,
+        height,
+    });
+    window.setBounds({
+        x: screen.getPrimaryDisplay().workAreaSize.width,
+        y,
+        width,
+        height,
+    });
     window.show();
     const interval = setInterval(
         () => {
             const bounds = window.getBounds();
-            const targetX =
-                screen.getPrimaryDisplay().workAreaSize.width - width;
+            const targetX = x;
             if (bounds.x > targetX) {
                 const nextX = Math.max(bounds.x - speed, targetX);
                 window.setBounds({ x: nextX, y: bounds.y, width, height });
