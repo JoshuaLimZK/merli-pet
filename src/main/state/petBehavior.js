@@ -60,7 +60,7 @@ const petBehavior = {
  */
 function pickNextState() {
     const states = ["follow", "wander", "idle"];
-    const weights = [0.45, 0.45, 0.1];
+    const weights = [0.25, 0.35, 0.4];
 
     const random = Math.random();
     let cumulative = 0;
