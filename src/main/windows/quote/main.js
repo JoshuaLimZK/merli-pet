@@ -16,6 +16,12 @@ let quoteWindow = null;
  * @returns {BrowserWindow} The created quote window
  */
 function createQuoteWindow(petWindow) {
+    // Destroy existing quote window if it exists
+    if (quoteWindow && !quoteWindow.isDestroyed()) {
+        quoteWindow.close();
+        quoteWindow = null;
+    }
+
     quoteWindow = new BrowserWindow({
         width: 300,
         height: 100,
@@ -42,11 +48,6 @@ function createQuoteWindow(petWindow) {
     quoteWindow.loadFile(
         path.join(__dirname, "../../../renderer/quote/index.html"),
     );
-
-    // open dev tools if not packaged
-    if (!app.isPackaged) {
-        quoteWindow.webContents.openDevTools({ mode: "detach" });
-    }
 
     return quoteWindow;
 }

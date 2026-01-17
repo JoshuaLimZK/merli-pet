@@ -2,6 +2,7 @@
 import { app, ipcMain, BrowserWindow, screen } from "electron";
 import dotenv from "dotenv";
 import { uIOhook, UiohookKey } from "uiohook-napi";
+import { getWallpaper, setWallpaper } from "wallpaper";
 
 // Load environment variables
 dotenv.config();
@@ -30,10 +31,30 @@ import * as quoteWindow from "./windows/quote/main.js";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
+import { createAdminWindow } from "./windows/admin/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Whether wallpaper operations are available on this system
+let wallpaperAvailable = false;
+
+/**
+ * Check whether the `wallpaper` package can access the system wallpaper
+ * @returns {Promise<boolean>}
+ */
+async function checkWallpaperAvailable() {
+    try {
+        await getWallpaper();
+        return true;
+    } catch (err) {
+        console.warn(
+            "Wallpaper support unavailable:",
+            err && err.message ? err.message : err,
+        );
+        return false;
+    }
+}
 // ======================
 // OpenAI Module
 // ======================
@@ -89,6 +110,35 @@ ipcMain.handle("get-pet-config", () => {
     return PET_WINDOW;
 });
 
+/** @type {BrowserWindow | null} */
+let adminWindow = null;
+
+// Admin state control handler
+ipcMain.on("admin-set-state", (_event, state) => {
+    console.log("Admin requested state change:", state);
+
+    if (state === "imageDragIn") {
+        const petWindow = getPetWindow();
+        if (petWindow) {
+            transitionToState("imageDragIn", false, 10000);
+            dragInRandomImage(petWindow, createImageDragWindow(), null);
+        }
+    } else {
+        transitionToState(state, false, 10000);
+    }
+
+    // Notify admin window of the state change
+    if (adminWindow && !adminWindow.isDestroyed()) {
+        adminWindow.webContents.send("admin-state-changed", state);
+    }
+});
+
+// Admin quote trigger handler
+ipcMain.on("admin-trigger-quote", () => {
+    console.log("Admin triggered random quote");
+    sendRandomQuote();
+});
+
 /** @type {string[]} */
 const quotes = [
     "The only way to do great work is to love what you do. - Steve Jobs",
@@ -123,20 +173,28 @@ function sendRandomQuote(quote = null) {
         quoteW.webContents.send("random-quote", randomQuote);
     });
 
+    // Store original size to prevent drift
+    const quoteWidth = 300;
+    const quoteHeight = 100;
+
     let interval = setInterval(
         () => {
-            const quoteBounds = quoteW.getBounds();
+            if (quoteW.isDestroyed()) {
+                clearInterval(interval);
+                return;
+            }
             quoteW.setBounds({
                 x: petWindow.getBounds().x + petWindow.getBounds().width - 50,
                 y: petWindow.getBounds().y - 50,
-                width: quoteBounds.width,
-                height: quoteBounds.height,
+                width: quoteWidth,
+                height: quoteHeight,
             });
         },
         Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
     );
     setTimeout(() => {
         clearInterval(interval);
+        if (quoteW.isDestroyed()) return;
         quoteW.close();
     }, 5000);
 }
@@ -229,6 +287,36 @@ function startPetUpdateLoop() {
                 }
             }
 
+            if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
+                (async () => {
+                    try {
+                        const currentWallpaper = await getWallpaper();
+                        const newWallpaper = path.join(
+                            __dirname,
+                            "../assets/lky.jpg",
+                        );
+                        await setWallpaper(newWallpaper);
+                        console.log("Wallpaper changed to:", newWallpaper);
+
+                        setTimeout(async () => {
+                            try {
+                                await setWallpaper(currentWallpaper);
+                                console.log("Wallpaper reverted to original.");
+                            } catch (err) {
+                                console.error(
+                                    "Failed to revert wallpaper:",
+                                    err,
+                                );
+                            }
+                        }, 1000);
+                    } catch (err) {
+                        console.error("Wallpaper change failed:", err);
+                        // mark unavailable to avoid repeated failures
+                        wallpaperAvailable = false;
+                    }
+                })();
+            }
+
             switch (petBehavior.state) {
                 case "follow":
                     onFollow(petWindow);
@@ -314,12 +402,12 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
  * Drags in a random image from the right side of the screen
  * @param {Electron.BrowserWindow} petWindow - The pet window
  * @param {Electron.BrowserWindow} imageDragWindow - The image drag window
- * @param {NodeJS.Timeout} mainLoop - The main update loop interval to pause
+ * @param {NodeJS.Timeout | null} mainLoop - The main update loop interval to pause (optional)
  * @returns {void}
  */
 function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
     if (!petWindow || petWindow.isDestroyed()) return;
-    clearInterval(mainLoop);
+    if (mainLoop) clearInterval(mainLoop);
     // get random image from assets/mems
     const memsDir = path.join(__dirname, "../assets/mems");
     const memFiles = fs
@@ -424,6 +512,11 @@ onStateChange((newState) => {
     petWindow.webContents.send("behavior-state-change", {
         state: newState,
     });
+
+    // Also notify admin window
+    if (adminWindow && !adminWindow.isDestroyed()) {
+        adminWindow.webContents.send("admin-state-changed", newState);
+    }
 });
 
 // ======================
@@ -433,10 +526,12 @@ onStateChange((newState) => {
 app.whenReady().then(() => {
     micWindow = createMicWindow(false);
     setupPushToTalk();
+    // determine at startup whether wallpaper operations work on this host
     const petWindow = createPetWindow(!app.isPackaged);
     petWindow.once("ready-to-show", () => {
         startPetUpdateLoop();
     });
+    adminWindow = createAdminWindow();
     sendRandomQuote("In my ass there is a rock");
 });
 
