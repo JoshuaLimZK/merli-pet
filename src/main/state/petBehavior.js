@@ -1,7 +1,6 @@
 // @ts-check
 import { screen } from "electron";
-import { PET_BEHAVIOR } from "../windows/pet/config.js";
-
+import { PET_BEHAVIOR, PET_WINDOW } from "../windows/pet/config.js";
 /**
  * @typedef {'follow' | 'wander' | 'idle' | 'dragging' | 'talking' | "imageDragIn"} PetBehaviorState
  */
@@ -36,9 +35,13 @@ function getScreenBounds() {
  */
 function pickWanderTarget() {
     const bounds = getScreenBounds();
+    const boundsMinX = bounds.minX + PET_WINDOW.SIZE / 1.5;
+    const boundsMaxX = bounds.maxX - PET_WINDOW.SIZE / 1.5;
+    const boundsMinY = bounds.minY + PET_WINDOW.SIZE / 1.5;
+    const boundsMaxY = bounds.maxY - PET_WINDOW.SIZE / 1.5;
     return {
-        x: randomBetween(bounds.minX, bounds.maxX),
-        y: randomBetween(bounds.minY, bounds.maxY),
+        x: randomBetween(boundsMinX, boundsMaxX),
+        y: randomBetween(boundsMinY, boundsMaxY),
     };
 }
 

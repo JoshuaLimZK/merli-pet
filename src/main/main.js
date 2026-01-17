@@ -185,7 +185,6 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
     let deltaXToTarget = targetX - petWindowCurrentX;
     let deltaYToTarget = targetY - petWindowCurrentY;
     let distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
-    let angleToTarget = Math.atan2(deltaXToTarget, deltaYToTarget);
 
     if (distanceToTarget > 0) {
         const directionX = deltaXToTarget / distanceToTarget;
