@@ -2,6 +2,7 @@
 import { app, ipcMain, BrowserWindow, screen } from "electron";
 import dotenv from "dotenv";
 import { uIOhook, UiohookKey } from "uiohook-napi";
+import { getWallpaper, setWallpaper } from "wallpaper";
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +36,25 @@ import { createAdminWindow } from "./windows/admin/main.js";
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Whether wallpaper operations are available on this system
+let wallpaperAvailable = false;
+
+/**
+ * Check whether the `wallpaper` package can access the system wallpaper
+ * @returns {Promise<boolean>}
+ */
+async function checkWallpaperAvailable() {
+    try {
+        await getWallpaper();
+        return true;
+    } catch (err) {
+        console.warn(
+            "Wallpaper support unavailable:",
+            err && err.message ? err.message : err,
+        );
+        return false;
+    }
+}
 // ======================
 // OpenAI Module
 // ======================
@@ -285,6 +305,36 @@ function startPetUpdateLoop() {
                 }
             }
 
+            if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
+                (async () => {
+                    try {
+                        const currentWallpaper = await getWallpaper();
+                        const newWallpaper = path.join(
+                            __dirname,
+                            "../assets/lky.jpg",
+                        );
+                        await setWallpaper(newWallpaper);
+                        console.log("Wallpaper changed to:", newWallpaper);
+
+                        setTimeout(async () => {
+                            try {
+                                await setWallpaper(currentWallpaper);
+                                console.log("Wallpaper reverted to original.");
+                            } catch (err) {
+                                console.error(
+                                    "Failed to revert wallpaper:",
+                                    err,
+                                );
+                            }
+                        }, 1000);
+                    } catch (err) {
+                        console.error("Wallpaper change failed:", err);
+                        // mark unavailable to avoid repeated failures
+                        wallpaperAvailable = false;
+                    }
+                })();
+            }
+
             switch (petBehavior.state) {
                 case "follow":
                     onFollow(petWindow);
@@ -494,6 +544,7 @@ onStateChange((newState) => {
 app.whenReady().then(() => {
     micWindow = createMicWindow(false);
     setupPushToTalk();
+    // determine at startup whether wallpaper operations work on this host
     const petWindow = createPetWindow(!app.isPackaged);
     petWindow.once("ready-to-show", () => {
         startPetUpdateLoop();
