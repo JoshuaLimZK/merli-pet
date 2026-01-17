@@ -243,7 +243,7 @@ async function initializeOpenAI() {
                         type: "realtime",
                         output_modalities: ["audio"],
                         instructions:
-                            "You are a helpful assistant named Merli. Please speak in english",
+                            "You are a helpful assistant named Merli. Please speak in english. If the user asks for anything related to bus timings, attempt to prompt for bus stop description",
                         audio: {
                             input: {
                                 format: {

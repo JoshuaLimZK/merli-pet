@@ -315,6 +315,7 @@ function startPetUpdateLoop() {
                 busWindow.loadFile(
                     path.join(__dirname, "../renderer/bus/index.html"),
                 );
+                transitionToState("idle", false, 1000);
             }
             if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
                 (async () => {
