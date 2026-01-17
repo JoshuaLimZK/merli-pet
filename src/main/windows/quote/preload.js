@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require("electron");
  * @typedef {Object} QuoteElectronAPI
  * @property {(callback: (quote: string) => void) => void} onRandomQuote - Listen for random quote events
  * @property {(callback: (x: number, y: number) => void) => void} onLocationUpdate - Listen for location update events
+ * @property {(width: number, height: number) => void} resizeWindow - Request window resize
  */
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -20,4 +21,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
         ipcRenderer.on("update-quote-location", (_event, x, y) =>
             callback(x, y),
         ),
+    /**
+     * @param {number} width
+     * @param {number} height
+     */
+    resizeWindow: (width, height) =>
+        ipcRenderer.send("resize-quote-window", width, height),
 });
