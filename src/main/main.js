@@ -22,7 +22,7 @@ import {
     pickWanderTarget,
 } from "./state/petBehavior.js";
 import { createImageDragWindow } from "./windows/image-drag-in/main.js";
-import { dragInRandomImage } from "./systems/imageDragInSystem.js";
+import { transitionToState } from "./state/petBehavior.js";
 import path from "path";
 import * as quoteWindow from "./windows/quote/main.js";
 // ======================
@@ -58,13 +58,13 @@ const quotes = [
 ];
 
 // Function to send a random quote to the renderer process
-function sendRandomQuote(quote=null) {
+function sendRandomQuote(quote = null) {
     let quoteW = quoteWindow.createQuoteWindow(getPetWindow());
     let randomQuote;
-    if(!quote){
-    randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-    }else{
-        randomQuote=quote;
+    if (!quote) {
+        randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    } else {
+        randomQuote = quote;
     }
     console.log("Sending quote:", randomQuote);
     quoteW.on("ready-to-show", () => {
@@ -72,18 +72,19 @@ function sendRandomQuote(quote=null) {
     });
     let petWindow = getPetWindow();
 
-    let interval=setInterval(() => {
+    let interval = setInterval(
+        () => {
             quoteW.setPosition(
                 petWindow.getBounds().x + petWindow.getBounds().width - 50,
-                petWindow.getBounds().y - 50,// + petWindow.getBounds().height,
+                petWindow.getBounds().y - 50, // + petWindow.getBounds().height,
                 false,
             );
-        }, Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
+        },
+        Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
     );
     setTimeout(() => {
         clearInterval(interval);
         quoteW.close();
-        
     }, 5000);
 }
 function onFollow(petWindow) {
@@ -91,101 +92,55 @@ function onFollow(petWindow) {
     const mousePositionX = mousePosition.x;
     const mousePositionY = mousePosition.y;
 
-    const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
-
-    let deltaXToTarget = mousePositionX - petWindowCurrentX;
-    let deltaYToTarget = mousePositionY - petWindowCurrentY;
-    let distanceMouseToWindow = Math.hypot(deltaXToTarget, deltaYToTarget);
-
-    if (distanceMouseToWindow < PET_WINDOW.STOP_DISTANCE_FROM_MOUSE) {
-        return;
-    }
-    petMoveTo(
+    const moving = petMoveTo(
         petWindow,
         mousePositionX,
         mousePositionY,
         PET_WINDOW.FOLLOW_SPEED,
     );
+    if (moving === false) {
+        return;
+    }
 }
 function onWander(petWindow) {
     if (!petBehavior.wanderTarget) {
         petBehavior.wanderTarget = pickWanderTarget();
     }
-    const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
+
     let targetX = petBehavior.wanderTarget.x;
     let targetY = petBehavior.wanderTarget.y;
-    let deltaXToTarget = targetX - petWindowCurrentX;
-    let deltaYToTarget = targetY - petWindowCurrentY;
-    let distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
-    if (distanceToTarget < PET_BEHAVIOR.WANDER_TARGET_REACHED_DISTANCE) {
-        petBehavior.wanderTarget = pickWanderTarget();
+
+    const moving = petMoveTo(
+        petWindow,
+        targetX,
+        targetY,
+        PET_WINDOW.FOLLOW_SPEED,
+    );
+    if (moving === false) {
         return;
     }
-    petMoveTo(petWindow, targetX, targetY, PET_WINDOW.FOLLOW_SPEED);
 }
-function updatemodel(petWindow) {
+function onIdle(petWindow) {
     const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
-    const mousePosition = screen.getCursorScreenPoint();
-    const mousePositionX = mousePosition.x;
-    const mousePositionY = mousePosition.y;
-    let deltaXMouseToWindow = mousePositionX - petWindowCurrentX;
-    let deltaYMouseToWindow = mousePositionY - petWindowCurrentY;
-    let angleToTarget;
-    switch (petBehavior.state) {
-        case "follow":
-            angleToTarget = Math.atan2(
-                deltaXMouseToWindow,
-                deltaYMouseToWindow,
-            );
-            break;
-        case "wander": {
-            const { x: wanderTargetX, y: wanderTargetY } =
-                petBehavior.wanderTarget || {
-                    x: petWindowCurrentX,
-                    y: petWindowCurrentY,
-                };
-            let deltaXWanderToWindow = wanderTargetX - petWindowCurrentX;
-            let deltaYWanderToWindow = wanderTargetY - petWindowCurrentY;
-            angleToTarget = Math.atan2(
-                deltaXWanderToWindow,
-                deltaYWanderToWindow,
-            );
-            break;
-        }
-    }
-    let distanceMouseToWindow = Math.hypot(
-        deltaXMouseToWindow,
-        deltaYMouseToWindow,
-    );
-    petWindow.webContents.send("mouse-move", {
-        mousePosition: { x: mousePositionX, y: mousePositionY },
-        deltatMouseToWindow: {
-            x: deltaXMouseToWindow,
-            y: deltaYMouseToWindow,
-        },
-        angleMouseToWindow: Math.atan2(
-            deltaXMouseToWindow,
-            deltaYMouseToWindow,
-        ),
-        angleToTarget,
-        distanceMouseToWindow,
-        isWithinStopDistance:
-            distanceMouseToWindow <= PET_WINDOW.STOP_DISTANCE_FROM_MOUSE,
-        behaviorState: petBehavior.state,
-    });
+    petMoveTo(petWindow, petWindowCurrentX, petWindowCurrentY, 0);
 }
+
 // ======================
 // Update Loop
 // ======================
 function startPetUpdateLoop() {
-    setInterval(
+    const mainLoop = setInterval(
         () => {
             const petWindow = getPetWindow();
             if (!petWindow) return;
 
             const didTransition = checkStateTransition();
 
-            updatemodel(petWindow);
+            if (didTransition && Math.random() < 0.075) {
+                transitionToState("imageDragIn", false, 10000);
+                console.log("Dragging in random image due to state transition");
+                dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
+            }
 
             switch (petBehavior.state) {
                 case "follow":
@@ -196,6 +151,7 @@ function startPetUpdateLoop() {
                     break;
 
                 case "idle":
+                    onIdle(petWindow);
                     break;
             }
         },
@@ -219,7 +175,7 @@ function startPetUpdateLoop() {
  * @param {number} targetX
  * @param {number} targetY
  * @param {number} speed
- * @returns {void}
+ * @returns {boolean} - Returns true if the pet is still moving, false if it has reached the target.
  */
 function petMoveTo(petWindow, targetX, targetY, speed) {
     if (!petWindow || petWindow.isDestroyed()) return;
@@ -256,7 +212,49 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
             width: PET_WINDOW.SIZE,
             height: PET_WINDOW.SIZE,
         });
+        petWindow.webContents.send("on-move", {
+            stopped: false,
+            angle: Math.atan2(deltaXToTarget, deltaYToTarget),
+        });
+        return true;
+    } else {
+        petWindow.webContents.send("on-move", { stopped: true, angle: 0 });
+        return false;
     }
+}
+
+function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
+    if (!petWindow || petWindow.isDestroyed()) return;
+    clearInterval(mainLoop);
+
+    const targetX = screen.getPrimaryDisplay().workAreaSize.width;
+    const targetY = Math.floor(
+        Math.random() * screen.getPrimaryDisplay().workAreaSize.height,
+    );
+
+    const dragInImageLoop = setInterval(() => {
+        const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
+        let moved = petMoveTo(petWindow, targetX, targetY, 3);
+        if (!moved) {
+            slideInFromRight(imageDragWindow, 400, 400, 3, targetY - 200);
+            const pullOutLoop = setInterval(() => {
+                const { x: petWindowCurrentX, y: petWindowCurrentY } =
+                    getPetPosition();
+                let movedBack = petMoveTo(
+                    petWindow,
+                    screen.getPrimaryDisplay().workAreaSize.width - 400,
+                    targetY,
+                    3,
+                );
+                if (!movedBack) {
+                    clearInterval(pullOutLoop);
+                    transitionToState("idle", false, 5000);
+                    startPetUpdateLoop();
+                }
+            }, 10);
+            clearInterval(dragInImageLoop);
+        }
+    }, 10);
 }
 
 // ======================
@@ -287,16 +285,19 @@ function slideInFromRight(
     window.setPosition(x, y);
     window.setSize(width, height);
     window.show();
-    const interval = setInterval(() => {
-        let curx, y = window.getPosition();
-        if (curx > screen.getPrimaryDisplay().workAreaSize.width - width) {
-            curx -= speed;
-            window.setPosition(x, y);
-        } else {
-            clearInterval(interval);
-        }
-    }, 
-        Math.floor(1000 / PET_WINDOW.UPDATE_FPS));
+    const interval = setInterval(
+        () => {
+            let curx,
+                y = window.getPosition();
+            if (curx > screen.getPrimaryDisplay().workAreaSize.width - width) {
+                curx -= speed;
+                window.setPosition(x, y);
+            } else {
+                clearInterval(interval);
+            }
+        },
+        Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
+    );
 }
 
 // ======================
@@ -316,12 +317,17 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
-    createPetWindow(!app.isPackaged);
-    let imageDragWindow = createImageDragWindow();
-    slideInFromRight(imageDragWindow, 400, 400, 10);
-
-    sendRandomQuote("In my ass there is a rock")
-    startPetUpdateLoop();
+    const petWindow = createPetWindow(!app.isPackaged);
+    petWindow.once("ready-to-show", () => {
+        startPetUpdateLoop();
+    });
+    sendRandomQuote("In my ass there is a rock");
+    // create bus window
+    const busWindow = new BrowserWindow({
+        width: 400,
+        height: 300,
+    });
+    busWindow.loadFile(path.join(__dirname, "../../renderer/bus/index.html"));
 });
 
 app.on("window-all-closed", () => {
@@ -332,8 +338,9 @@ app.on("window-all-closed", () => {
 
 app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-        createPetWindow(!app.isPackaged);
-
-        startPetUpdateLoop();
+        const petWindow = createPetWindow(!app.isPackaged);
+        petWindow.once("ready-to-show", () => {
+            startPetUpdateLoop();
+        });
     }
 });
