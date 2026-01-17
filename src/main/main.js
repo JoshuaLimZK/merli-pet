@@ -37,6 +37,7 @@ import * as quoteWindow from "./windows/quote/main.js";
 // Reference Variables
 // e.g Windows, API Clients, etc.
 // ======================
+let micWindow;
 
 // ======================
 // IPC Handlers
@@ -284,18 +285,17 @@ function slideInFromRight(
     ),
 ) {
     let x = screen.getPrimaryDisplay().workAreaSize.width;
-    window.setSize(0, height);
-    window.setPosition(x, y);
-    window.setSize(width, height);
+    window.setBounds({ x, y, width: 0, height });
+    window.setBounds({ x, y, width, height });
     window.show();
     const interval = setInterval(
         () => {
-            const [curX, curY] = window.getPosition();
+            const bounds = window.getBounds();
             const targetX =
                 screen.getPrimaryDisplay().workAreaSize.width - width;
-            if (curX > targetX) {
-                const nextX = Math.max(curX - speed, targetX);
-                window.setPosition(nextX, curY);
+            if (bounds.x > targetX) {
+                const nextX = Math.max(bounds.x - speed, targetX);
+                window.setBounds({ x: nextX, y: bounds.y, width, height });
             } else {
                 clearInterval(interval);
             }
@@ -321,6 +321,8 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
+    micWindow = createMicWindow(!app.isPackaged);
+    setupPushToTalk();
     const petWindow = createPetWindow(!app.isPackaged);
     petWindow.once("ready-to-show", () => {
         startPetUpdateLoop();
@@ -348,3 +350,6 @@ app.on("activate", () => {
         });
     }
 });
+function setupPushToTalk() {
+    throw new Error("Function not implemented.");
+}
