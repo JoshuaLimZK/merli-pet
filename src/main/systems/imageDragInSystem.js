@@ -8,6 +8,6 @@
  * @returns {void}
  */
 
-module.exports = {
-    dragInRandomImage,
-};
+export function dragInRandomImage(petWindow, imageDragWindow) {
+    if (!petWindow || petWindow.isDestroyed()) return;
+}

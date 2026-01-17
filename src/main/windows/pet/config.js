@@ -33,4 +33,4 @@ const PET_BEHAVIOR = {
     DRAG_HOLD_TIME: 300, // ms to hold before drag starts
 };
 
-module.exports = { PET_WINDOW, PET_BEHAVIOR };
+export { PET_WINDOW, PET_BEHAVIOR };

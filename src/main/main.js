@@ -1,25 +1,30 @@
 // @ts-check
-const { app, ipcMain, BrowserWindow, screen } = require("electron");
+import { app, ipcMain, BrowserWindow, screen } from "electron";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 // ======================
 // Import Modules
 // ======================
-const { PET_WINDOW, PET_BEHAVIOR } = require("./windows/pet/config");
-const {
+import { PET_WINDOW, PET_BEHAVIOR } from "./windows/pet/config.js";
+import {
     createPetWindow,
     getPetWindow,
     getPetPosition,
     setPetPosition,
-} = require("./windows/pet/window");
-const {
+} from "./windows/pet/window.js";
+import { createMicWindow, getMicWindow } from "./windows/mic/window.js";
+import {
     petBehavior,
     onStateChange,
     checkStateTransition,
-    transitionToState,
-} = require("./state/petBehavior");
-const { createImageDragWindow } = require("./windows/image-drag-in/main");
-const path = require("path");
-const { clear } = require("console");
+    pickWanderTarget,
+} from "./state/petBehavior.js";
+import { createImageDragWindow } from "./windows/image-drag-in/main.js";
+import { dragInRandomImage } from "./systems/imageDragInSystem.js";
+import path from "path";
 // ======================
 // OpenAI Module
 // ======================
@@ -61,7 +66,6 @@ function onFollow(petWindow) {
     );
 }
 function onWander(petWindow) {
-    const { pickWanderTarget } = require("./state/petBehavior");
     if (!petBehavior.wanderTarget) {
         petBehavior.wanderTarget = pickWanderTarget();
     }
@@ -91,6 +95,7 @@ function updatemodel(petWindow) {
                 deltaXMouseToWindow,
                 deltaYMouseToWindow,
             );
+            break;
         case "wander":
             const { x: wanderTargetX, y: wanderTargetY } =
                 petBehavior.wanderTarget || {
@@ -103,6 +108,7 @@ function updatemodel(petWindow) {
                 deltaXWanderToWindow,
                 deltaYWanderToWindow,
             );
+            break;
     }
     let distanceMouseToWindow = Math.hypot(
         deltaXMouseToWindow,

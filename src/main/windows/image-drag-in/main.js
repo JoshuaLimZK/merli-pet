@@ -1,7 +1,11 @@
-const { BrowserWindow, screen } = require("electron");
-const path = require("path");
+import { BrowserWindow, screen } from "electron";
+import path from "path";
+import { fileURLToPath } from "url";
 
-function createImageDragWindow() {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export function createImageDragWindow() {
     const imageDragWindow = new BrowserWindow({
         width: 0,
         height: 400,
@@ -21,7 +25,3 @@ function createImageDragWindow() {
 
     return imageDragWindow;
 }
-
-module.exports = {
-    createImageDragWindow,
-};

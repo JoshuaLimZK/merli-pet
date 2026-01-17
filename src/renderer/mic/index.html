@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Merli Microphone</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎤 Voice Input</h1>
+
+            <div class="status" id="status">Click "Start" to begin</div>
+
+            <div class="controls">
+                <button id="startBtn" class="btn btn-primary">
+                    Start Listening
+                </button>
+                <button id="stopBtn" class="btn btn-secondary" disabled>
+                    Stop Listening
+                </button>
+            </div>
+
+            <div class="debug-section">
+                <h3>Transcription:</h3>
+                <div id="transcription" class="debug-box"></div>
+
+                <h3>AI Response:</h3>
+                <div id="response" class="debug-box"></div>
+            </div>
+        </div>
+
+        <script src="renderer.js"></script>
+    </body>
+</html>

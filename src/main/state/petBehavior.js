@@ -1,6 +1,6 @@
 // @ts-check
-const { screen } = require("electron");
-const { PET_BEHAVIOR } = require("../windows/pet/config");
+import { screen } from "electron";
+import { PET_BEHAVIOR } from "../windows/pet/config.js";
 
 /**
  * @typedef {'follow' | 'wander' | 'idle' | 'dragging' | 'talking' | "imageDragIn"} PetBehaviorState
@@ -57,7 +57,7 @@ const petBehavior = {
  */
 function pickNextState() {
     const states = ["follow", "wander", "idle"];
-    const weights = [0.2, 0.3, 0.7];
+    const weights = [0.45, 0.45, 0.1];
 
     const random = Math.random();
     let cumulative = 0;
@@ -157,7 +157,7 @@ function checkStateTransition() {
     return false;
 }
 
-module.exports = {
+export {
     petBehavior,
     transitionToState,
     checkStateTransition,
