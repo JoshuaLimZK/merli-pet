@@ -12,6 +12,12 @@ const { contextBridge, ipcRenderer } = require("electron");
  */
 
 /**
+ * @typedef {Object} MoveData
+ * @property {boolean} stopped
+ * @property {number} angle
+ */
+
+/**
  * @typedef {Object} DragOffset
  * @property {number} x
  * @property {number} y
@@ -30,9 +36,14 @@ const { contextBridge, ipcRenderer } = require("electron");
  */
 
 /**
+ * @typedef {(data: MoveData) => void} MoveCallback
+ */
+
+/**
  * @typedef {Object} ElectronAPI
  * @property {(callback: MouseMoveCallback) => void} onMouseMove
  * @property {(callback: BehaviorStateCallback) => void} onBehaviorStateChange
+ * @property {(callback: MoveCallback) => void} onMove
  * @property {() => Promise<PetConfig>} getPetConfig
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: DragOffset) => void} startDrag

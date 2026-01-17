@@ -14,6 +14,7 @@ import { crossFadeToAction, lerpRotation } from "./animation.js";
  * @property {() => Promise<any>} getPetConfig
  * @property {(callback: (data: any) => void) => void} onMouseMove
  * @property {(callback: (data: any) => void) => void} onBehaviorStateChange
+ * @property {(callback: (data: { stopped: boolean, angle: number }) => void) => void} onMove
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: {x: number, y: number}) => void} startDrag
  * @property {() => void} stopDrag
@@ -147,12 +148,13 @@ const win = /** @type {any} */ (window);
     // ============================================================================
 
     /**
-     * @typedef {'follow' | 'wander' | 'idle' | 'dragging'} BehaviorState
+     * @typedef {'follow' | 'wander' | 'idle' | 'dragging' | 'imageDragIn'} BehaviorState
      */
 
     /** @type {BehaviorState} */
     let currentBehaviorState = "follow";
 
+    if (win.electronAPI) {
         win.electronAPI.onMove((data) => {
             const stopped = data.stopped;
             const angle = data.angle;
