@@ -1,3 +1,4 @@
+// @ts-check
 import { app, ipcMain, BrowserWindow, screen } from "electron";
 import dotenv from "dotenv";
 import { uIOhook, UiohookKey } from "uiohook-napi";
@@ -8,14 +9,14 @@ dotenv.config();
 // ======================
 // Import Modules
 // ======================
-import { PET_WINDOW, PET_BEHAVIOR } from "./windows/pet/config.js";
+import { PET_WINDOW } from "./windows/pet/config.js";
 import {
     createPetWindow,
     getPetWindow,
     getPetPosition,
     setPetPosition,
 } from "./windows/pet/window.js";
-import { createMicWindow, getMicWindow } from "./windows/mic/window.js";
+import { createMicWindow } from "./windows/mic/window.js";
 import {
     petBehavior,
     onStateChange,
@@ -24,7 +25,7 @@ import {
 } from "./state/petBehavior.js";
 import { createImageDragWindow } from "./windows/image-drag-in/main.js";
 import { transitionToState } from "./state/petBehavior.js";
-import path from "path";
+
 import * as quoteWindow from "./windows/quote/main.js";
 // ======================
 // OpenAI Module
@@ -44,9 +45,15 @@ let micWindow = null;
 // ======================
 // Push-to-Talk Setup
 // ======================
+/** @type {boolean} */
 let isPushToTalkActive = false;
+/** @type {number} */
 const PUSH_TO_TALK_KEY = UiohookKey.AltRight; // Right Alt key
 
+/**
+ * Sets up global push-to-talk keyboard listener using uiohook
+ * @returns {void}
+ */
 function setupPushToTalk() {
     uIOhook.on("keydown", (e) => {
         if (e.keycode === PUSH_TO_TALK_KEY && !isPushToTalkActive) {
@@ -74,6 +81,8 @@ function setupPushToTalk() {
 ipcMain.handle("get-pet-config", () => {
     return PET_WINDOW;
 });
+
+/** @type {string[]} */
 const quotes = [
     "The only way to do great work is to love what you do. - Steve Jobs",
     "Life is what happens when you're busy making other plans. - John Lennon",
@@ -87,9 +96,15 @@ const quotes = [
     "Do not watch the clock. Do what it does. Keep going. - Sam Levenson",
 ];
 
-// Function to send a random quote to the renderer process
+/**
+ * Sends a random quote to the renderer process via a quote window
+ * @param {string | null} [quote=null] - Optional specific quote to display, otherwise picks randomly
+ * @returns {void}
+ */
 function sendRandomQuote(quote = null) {
-    let quoteW = quoteWindow.createQuoteWindow(getPetWindow());
+    let petWindow = getPetWindow();
+    if (!petWindow) return;
+    let quoteW = quoteWindow.createQuoteWindow(petWindow);
     let randomQuote;
     if (!quote) {
         randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
@@ -100,7 +115,6 @@ function sendRandomQuote(quote = null) {
     quoteW.on("ready-to-show", () => {
         quoteW.webContents.send("random-quote", randomQuote);
     });
-    let petWindow = getPetWindow();
 
     let interval = setInterval(
         () => {
@@ -117,6 +131,12 @@ function sendRandomQuote(quote = null) {
         quoteW.close();
     }, 5000);
 }
+
+/**
+ * Handles the follow behavior - pet follows the mouse cursor
+ * @param {Electron.BrowserWindow} petWindow - The pet window to move
+ * @returns {void}
+ */
 function onFollow(petWindow) {
     const mousePosition = screen.getCursorScreenPoint();
     const mousePositionX = mousePosition.x;
@@ -132,6 +152,12 @@ function onFollow(petWindow) {
         return;
     }
 }
+
+/**
+ * Handles the wander behavior - pet moves to random targets
+ * @param {Electron.BrowserWindow} petWindow - The pet window to move
+ * @returns {void}
+ */
 function onWander(petWindow) {
     if (!petBehavior.wanderTarget) {
         petBehavior.wanderTarget = pickWanderTarget();
@@ -150,6 +176,12 @@ function onWander(petWindow) {
         return;
     }
 }
+
+/**
+ * Handles the idle behavior - pet stays in place
+ * @param {Electron.BrowserWindow} petWindow - The pet window
+ * @returns {void}
+ */
 function onIdle(petWindow) {
     const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
     petMoveTo(petWindow, petWindowCurrentX, petWindowCurrentY, 0);
@@ -158,6 +190,11 @@ function onIdle(petWindow) {
 // ======================
 // Update Loop
 // ======================
+
+/**
+ * Starts the main pet update loop that handles behavior state transitions and movement
+ * @returns {void}
+ */
 function startPetUpdateLoop() {
     const mainLoop = setInterval(
         () => {
@@ -208,7 +245,7 @@ function startPetUpdateLoop() {
  * @returns {boolean} - Returns true if the pet is still moving, false if it has reached the target.
  */
 function petMoveTo(petWindow, targetX, targetY, speed) {
-    if (!petWindow || petWindow.isDestroyed()) return;
+    if (!petWindow || petWindow.isDestroyed()) return false;
     /** @type {Point} */
     const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
     let deltaXToTarget = targetX - petWindowCurrentX;
@@ -253,6 +290,13 @@ function petMoveTo(petWindow, targetX, targetY, speed) {
     }
 }
 
+/**
+ * Drags in a random image from the right side of the screen
+ * @param {Electron.BrowserWindow} petWindow - The pet window
+ * @param {Electron.BrowserWindow} imageDragWindow - The image drag window
+ * @param {NodeJS.Timeout} mainLoop - The main update loop interval to pause
+ * @returns {void}
+ */
 function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
     if (!petWindow || petWindow.isDestroyed()) return;
     clearInterval(mainLoop);
@@ -263,14 +307,11 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
     );
 
     const dragInImageLoop = setInterval(() => {
-        const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
         let moved = petMoveTo(petWindow, targetX, targetY, 3);
         if (!moved) {
             slideInFromRight(imageDragWindow, 400, 400, 3, targetY - 200);
             const pullOutLoop = setInterval(
                 () => {
-                    const { x: petWindowCurrentX, y: petWindowCurrentY } =
-                        getPetPosition();
                     let movedBack = petMoveTo(
                         petWindow,
                         screen.getPrimaryDisplay().workAreaSize.width - 400,
