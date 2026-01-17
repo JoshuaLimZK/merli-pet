@@ -23,6 +23,10 @@ export function createImageDragWindow() {
         y: Math.floor(
             (screen.getPrimaryDisplay().workAreaSize.height - 400) / 2,
         ),
+        webPreferences: {
+            contextIsolation: true,
+            preload: path.join(__dirname, "preload.js"),
+        },
     });
 
     imageDragWindow.loadFile(
