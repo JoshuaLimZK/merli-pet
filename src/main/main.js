@@ -15,54 +15,13 @@ import {
     getPetPosition,
     setPetPosition,
 } from "./windows/pet/window.js";
+import { createMicWindow, getMicWindow } from "./windows/mic/window.js";
 import {
     petBehavior,
     onStateChange,
     checkStateTransition,
     pickWanderTarget,
 } from "./state/petBehavior.js";
-
-// ======================
-// OpenAI Module
-// ======================
-/**
- * @type {import ("./openai/main.mjs") | null}
- */
-let openAIModule = null;
-let isOpenAIInitialized = false;
-
-const initializedOpenAI = async () => {
-    if (isOpenAIInitialized) return openAIModule;
-
-    if (!openAIModule) {
-        const apiKey = process.env.OPENAI_API_KEY || "";
-        const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY || "";
-
-        if (!apiKey) {
-            console.warn(
-                "OPENAI_API_KEY is not set. OpenAI Realtime session will not be initialized.",
-            );
-            return null;
-        }
-
-        console.log(
-            "Initializing OpenAI with ElevenLabs TTS:",
-            elevenLabsApiKey ? "enabled" : "disabled",
-        );
-
-        openAIModule = await import("./openai/main.mjs");
-        await openAIModule.initializeOpenAIRealtimeSession(
-            apiKey,
-            elevenLabsApiKey,
-        );
-        isOpenAIInitialized = true;
-    }
-    return openAIModule;
-};
-
-// ======================
-// ElevenLabs Module
-// ======================
 
 // ======================
 // Reference Variables
@@ -207,11 +166,10 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
-    initializedOpenAI();
+    //createPetWindow(!app.isPackaged);
+    createMicWindow(!app.isPackaged);
 
-    createPetWindow(!app.isPackaged);
-
-    startPetUpdateLoop();
+    //startPetUpdateLoop();
 });
 
 app.on("window-all-closed", () => {
