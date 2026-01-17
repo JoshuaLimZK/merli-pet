@@ -25,7 +25,7 @@ export function loadFBX(path) {
             /**
              * @param {ErrorEvent} error
              */
-            (error) => reject(error)
+            (error) => reject(error),
         );
     });
 }
@@ -56,7 +56,7 @@ export function centerAndScaleModel(model, targetSize) {
  */
 export async function loadPetModel(scene, modelSize) {
     // Load the idle model (contains the mesh)
-    const idleModel = await loadFBX("../../../assets/Maria@Idle.fbx");
+    const idleModel = await loadFBX("../../assets/Maria@Idle.fbx");
 
     // Center and scale the model
     centerAndScaleModel(idleModel, modelSize);
@@ -73,7 +73,7 @@ export async function loadPetModel(scene, modelSize) {
 
     // Load walk animation
     try {
-        const walkModel = await loadFBX("../../../assets/Maria@Walk.fbx");
+        const walkModel = await loadFBX("../../assets/Maria@Walk.fbx");
         if (walkModel.animations && walkModel.animations.length > 0) {
             actions.walk = mixer.clipAction(walkModel.animations[0]);
         }
@@ -82,7 +82,7 @@ export async function loadPetModel(scene, modelSize) {
     }
 
     try {
-        const floatModel = await loadFBX("../../../assets/Maria@Float.fbx");
+        const floatModel = await loadFBX("../../assets/Maria@Float.fbx");
         if (floatModel.animations && floatModel.animations.length > 0) {
             actions.float = mixer.clipAction(floatModel.animations[0]);
         }

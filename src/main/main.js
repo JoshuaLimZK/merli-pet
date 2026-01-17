@@ -68,7 +68,7 @@ function startPetUpdateLoop() {
             let deltaXToTarget = targetX - petWindowCurrentX;
             let deltaYToTarget = targetY - petWindowCurrentY;
             distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
-            angleToTarget = Math.atan2(deltaYToTarget, deltaXToTarget);
+            angleToTarget = Math.atan2(deltaXToTarget, deltaYToTarget);
 
             petWindow.webContents.send("mouse-move", {
                 mousePosition: { x: mousePositionX, y: mousePositionY },
@@ -77,8 +77,8 @@ function startPetUpdateLoop() {
                     y: deltaYMouseToWindow,
                 },
                 angleMouseToWindow: Math.atan2(
-                    deltaYMouseToWindow,
                     deltaXMouseToWindow,
+                    deltaYMouseToWindow,
                 ),
                 angleToTarget,
                 distanceMouseToWindow,
