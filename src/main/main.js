@@ -118,11 +118,13 @@ function sendRandomQuote(quote = null) {
 
     let interval = setInterval(
         () => {
-            quoteW.setPosition(
-                petWindow.getBounds().x + petWindow.getBounds().width - 50,
-                petWindow.getBounds().y - 50, // + petWindow.getBounds().height,
-                false,
-            );
+            const quoteBounds = quoteW.getBounds();
+            quoteW.setBounds({
+                x: petWindow.getBounds().x + petWindow.getBounds().width - 50,
+                y: petWindow.getBounds().y - 50,
+                width: quoteBounds.width,
+                height: quoteBounds.height,
+            });
         },
         Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
     );
