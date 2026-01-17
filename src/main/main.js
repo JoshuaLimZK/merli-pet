@@ -77,6 +77,10 @@ function onWander(petWindow) {
         return;
     }
 }
+function onIdle(petWindow) {
+    const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
+    petMoveTo(petWindow, petWindowCurrentX, petWindowCurrentY, 0);
+}
 
 // ======================
 // Update Loop
