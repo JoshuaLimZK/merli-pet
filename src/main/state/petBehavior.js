@@ -1,6 +1,6 @@
 // @ts-check
-const { screen } = require("electron");
-const { PET_BEHAVIOR } = require("../windows/pet/config");
+import { screen } from "electron";
+import { PET_BEHAVIOR } from "../windows/pet/config.js";
 
 /**
  * @typedef {'follow' | 'wander' | 'idle' | 'dragging' | 'talking'} PetBehaviorState
@@ -99,7 +99,7 @@ function onStateChange(callback) {
 function transitionToState(
     newState,
     savePrevious = false,
-    duration = Infinity
+    duration = Infinity,
 ) {
     if (savePrevious && newState in ["dragging"]) {
         petBehavior.previousState = petBehavior.state;
@@ -111,20 +111,20 @@ function transitionToState(
         case "follow":
             duration = randomBetween(
                 PET_BEHAVIOR.FOLLOW_DURATION_MIN,
-                PET_BEHAVIOR.FOLLOW_DURATION_MAX
+                PET_BEHAVIOR.FOLLOW_DURATION_MAX,
             );
             break;
         case "wander":
             duration = randomBetween(
                 PET_BEHAVIOR.WANDER_DURATION_MIN,
-                PET_BEHAVIOR.WANDER_DURATION_MAX
+                PET_BEHAVIOR.WANDER_DURATION_MAX,
             );
             petBehavior.wanderTarget = pickWanderTarget();
             break;
         case "idle":
             duration = randomBetween(
                 PET_BEHAVIOR.IDLE_DURATION_MIN,
-                PET_BEHAVIOR.IDLE_DURATION_MAX
+                PET_BEHAVIOR.IDLE_DURATION_MAX,
             );
             break;
         case "dragging":
@@ -155,7 +155,7 @@ function checkStateTransition() {
     return false;
 }
 
-module.exports = {
+export {
     petBehavior,
     transitionToState,
     checkStateTransition,

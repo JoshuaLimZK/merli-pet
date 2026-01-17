@@ -1,8 +1,14 @@
 // @ts-check
-const { BrowserWindow, screen } = require("electron");
-const path = require("path");
-const { PET_WINDOW } = require("./config");
-const { transitionToState } = require("../../state/petBehavior");
+import { BrowserWindow, screen } from "electron";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { PET_WINDOW } from "./config.js";
+import { transitionToState } from "../../state/petBehavior.js";
+
+// Get __dirname equivalent in ES modules
+// @ts-expect-error - import.meta.url is available in ES modules but TypeScript may not recognize it in .mjs files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /** @type {number} */
 let petWindowCurrentX = 0;
@@ -80,9 +86,4 @@ function createPetWindow(isDevelopment) {
     return petWindow;
 }
 
-module.exports = {
-    createPetWindow,
-    getPetWindow,
-    getPetPosition,
-    setPetPosition,
-};
+export { createPetWindow, getPetWindow, getPetPosition, setPetPosition };

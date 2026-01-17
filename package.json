@@ -8,23 +8,27 @@
     },
     "license": "ISC",
     "author": "",
-    "type": "commonjs",
+    "type": "module",
     "main": "src/main/main.js",
     "scripts": {
-        "start": "electron ."
+        "start": "electron .",
+        "test:elevenlabs": "node src/main/elevenlabs/test.js"
     },
     "devDependencies": {
-        "electron": "^40.0.0",
         "@eslint/js": "^9.39.2",
+        "@types/dotenv": "^6.1.1",
+        "electron": "^40.0.0",
         "eslint": "^9.39.2",
         "globals": "^17.0.0",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.52.0"
     },
-        "dependencies": {
+    "dependencies": {
         "@openai/agents": "^0.3.7",
         "@types/node": "^25.0.6",
+        "dotenv": "^17.2.3",
+        "ws": "^8.19.0",
         "zod": "^3.25.76"
     }
 }

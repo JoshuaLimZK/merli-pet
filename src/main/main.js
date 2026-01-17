@@ -1,25 +1,64 @@
 // @ts-check
-const { app, ipcMain, BrowserWindow, screen } = require("electron");
+import { app, ipcMain, BrowserWindow, screen } from "electron";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 // ======================
 // Import Modules
 // ======================
-const { PET_WINDOW, PET_BEHAVIOR } = require("./windows/pet/config");
-const {
+import { PET_WINDOW, PET_BEHAVIOR } from "./windows/pet/config.js";
+import {
     createPetWindow,
     getPetWindow,
     getPetPosition,
     setPetPosition,
-} = require("./windows/pet/window");
-const {
+} from "./windows/pet/window.js";
+import {
     petBehavior,
     onStateChange,
     checkStateTransition,
-} = require("./state/petBehavior");
+    pickWanderTarget,
+} from "./state/petBehavior.js";
 
 // ======================
 // OpenAI Module
 // ======================
+/**
+ * @type {import ("./openai/main.mjs") | null}
+ */
+let openAIModule = null;
+let isOpenAIInitialized = false;
+
+const initializedOpenAI = async () => {
+    if (isOpenAIInitialized) return openAIModule;
+
+    if (!openAIModule) {
+        const apiKey = process.env.OPENAI_API_KEY || "";
+        const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY || "";
+
+        if (!apiKey) {
+            console.warn(
+                "OPENAI_API_KEY is not set. OpenAI Realtime session will not be initialized.",
+            );
+            return null;
+        }
+
+        console.log(
+            "Initializing OpenAI with ElevenLabs TTS:",
+            elevenLabsApiKey ? "enabled" : "disabled",
+        );
+
+        openAIModule = await import("./openai/main.mjs");
+        await openAIModule.initializeOpenAIRealtimeSession(
+            apiKey,
+            elevenLabsApiKey,
+        );
+        isOpenAIInitialized = true;
+    }
+    return openAIModule;
+};
 
 // ======================
 // ElevenLabs Module
@@ -115,9 +154,6 @@ function startPetUpdateLoop() {
                         shouldMove = true;
                         speed = PET_BEHAVIOR.WANDER_SPEED;
                     } else {
-                        const {
-                            pickWanderTarget,
-                        } = require("./state/petBehavior");
                         petBehavior.wanderTarget = pickWanderTarget();
                     }
                     break;
@@ -171,9 +207,40 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
+    initializedOpenAI();
+
     createPetWindow(!app.isPackaged);
 
     startPetUpdateLoop();
+
+    // Testing OpenAI Realtime
+    setTimeout(() => {
+        if (isOpenAIInitialized && openAIModule) {
+            openAIModule
+                .sendMessageToMerliAgent(
+                    "Hello Merli, how are you today?",
+                    /**
+                     * @param {string} delta
+                     */
+                    (delta) => {
+                        // Print each chunk as it arrives
+                        process.stdout.write(delta);
+                    },
+                    /**
+                     * @param {string} fullText
+                     */
+                    (fullText) => {
+                        console.log("\n✅ Complete response:", fullText);
+                    },
+                )
+                .catch((error) => {
+                    console.error(
+                        "Error sending message to Merli agent:",
+                        error,
+                    );
+                });
+        }
+    }, 5000);
 });
 
 app.on("window-all-closed", () => {

@@ -9,6 +9,6 @@
         "baseUrl": ".",
         "types": ["node"]
     },
-    "include": ["src/**/*.js"],
+    "include": ["src/**/*.js", "src/main/openai/main.mjs"],
     "exclude": ["node_modules"]
 }
