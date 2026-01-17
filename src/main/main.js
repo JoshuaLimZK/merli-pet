@@ -32,6 +32,8 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 import { createAdminWindow } from "./windows/admin/main.js";
+import { flagPoleAnimation } from "./windows/flagpole/main.js";
+import { petMoveTo } from "./movement/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -123,6 +125,12 @@ ipcMain.on("admin-set-state", (_event, state) => {
             transitionToState("imageDragIn", false, 10000);
             dragInRandomImage(petWindow, createImageDragWindow(), null);
         }
+    } else if (state === "flagPole") {
+        const petWindow = getPetWindow();
+        if (petWindow) {
+            transitionToState("flagPole", false, Infinity);
+            flagPoleAnimation(petWindow);
+        }
     } else if (state === "getBusTimings") {
         transitionToState("getBusTimings", false, 2000);
     } else {
@@ -139,6 +147,12 @@ ipcMain.on("admin-set-state", (_event, state) => {
 ipcMain.on("admin-trigger-quote", () => {
     console.log("Admin triggered random quote");
     sendRandomQuote();
+});
+
+// Show quote from mic renderer (AI response)
+ipcMain.on("show-quote", (_event, { text, duration }) => {
+    console.log("Showing quote from mic:", text, "duration:", duration);
+    sendRandomQuote(text, duration);
 });
 
 /** @type {string[]} */
@@ -168,9 +182,10 @@ const quotes = [
 /**
  * Sends a random quote to the renderer process via a quote window
  * @param {string | null} [quote=null] - Optional specific quote to display, otherwise picks randomly
+ * @param {number} [duration=5000] - Duration to display the quote in milliseconds
  * @returns {void}
  */
-function sendRandomQuote(quote = null) {
+function sendRandomQuote(quote = null, duration = 5000) {
     let petWindow = getPetWindow();
     if (!petWindow) return;
     let quoteW = quoteWindow.createQuoteWindow(petWindow);
@@ -208,7 +223,7 @@ function sendRandomQuote(quote = null) {
         clearInterval(interval);
         if (quoteW.isDestroyed()) return;
         quoteW.close();
-    }, 5000);
+    }, duration);
 }
 
 /**
@@ -410,71 +425,6 @@ function startPetUpdateLoop() {
         Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
     );
 }
-
-// ======================
-// Movement to x y Function
-// ======================
-
-/**
- * @typedef {Object} Point
- * @property {number} x
- * @property {number} y
- */
-
-/**
- * Moves the pet window toward a target position at a given speed.
- * @param {Electron.BrowserWindow} petWindow
- * @param {number} targetX
- * @param {number} targetY
- * @param {number} speed
- * @returns {boolean} - Returns true if the pet is still moving, false if it has reached the target.
- */
-function petMoveTo(petWindow, targetX, targetY, speed) {
-    if (!petWindow || petWindow.isDestroyed()) return false;
-    /** @type {Point} */
-    const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
-    let deltaXToTarget = targetX - petWindowCurrentX;
-    let deltaYToTarget = targetY - petWindowCurrentY;
-    let distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
-
-    if (distanceToTarget > 0) {
-        const directionX = deltaXToTarget / distanceToTarget;
-        const directionY = deltaYToTarget / distanceToTarget;
-
-        let moveX = directionX * speed;
-        let moveY = directionY * speed;
-        const moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
-
-        if (moveDistance > distanceToTarget) {
-            moveX = deltaXToTarget;
-            moveY = deltaYToTarget;
-        }
-
-        const newX = petWindowCurrentX + moveX;
-        const newY = petWindowCurrentY + moveY;
-        setPetPosition(newX, newY);
-
-        const petWindowX = Math.round(newX - PET_WINDOW.SIZE / 2);
-        const petWindowY = Math.round(newY - PET_WINDOW.SIZE / 2);
-
-        // Use setBounds instead of setPosition to prevent window size drift on Windows
-        petWindow.setBounds({
-            x: petWindowX,
-            y: petWindowY,
-            width: PET_WINDOW.SIZE,
-            height: PET_WINDOW.SIZE,
-        });
-        petWindow.webContents.send("on-move", {
-            stopped: false,
-            angle: Math.atan2(deltaXToTarget, deltaYToTarget),
-        });
-        return true;
-    } else {
-        petWindow.webContents.send("on-move", { stopped: true, angle: 0 });
-        return false;
-    }
-}
-
 /**
  * Drags in a random image from the right side of the screen
  * @param {Electron.BrowserWindow} petWindow - The pet window

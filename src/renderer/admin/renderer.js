@@ -14,7 +14,6 @@ const win = /** @type {any} */ (window);
 const currentStateEl = document.getElementById("currentState");
 const buttons = document.querySelectorAll("[data-state]");
 const quoteBtn = document.getElementById("quoteBtn");
-const busBtn = document.getElementById("btn-bus");
 
 // Handle state button clicks
 buttons.forEach((btn) => {
@@ -30,12 +29,6 @@ buttons.forEach((btn) => {
 if (quoteBtn) {
     quoteBtn.addEventListener("click", () => {
         win.electronAPI.triggerQuote();
-    });
-}
-
-if (busBtn) {
-    busBtn.addEventListener("click", () => {
-        win.electronAPI.setState("getBusTimings");
     });
 }
 

@@ -14,6 +14,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
  * @property {THREE.AnimationAction} [float] - Float animation action
  * @property {THREE.AnimationAction} [dance] - Dance animation action
  * @property {THREE.AnimationAction} [blink] - Blinking animation action (additive)
+ * @property {THREE.AnimationAction} [push] - Push up animation action
+ * @property {THREE.AnimationAction} [armsOut] - Arms out animation action
  */
 
 /**
@@ -91,7 +93,7 @@ export async function loadPetModel(scene, modelSize) {
     }
 
     // Debug: Log model metadata
-    // debugModelMetadata(gltf);
+    debugModelMetadata(gltf);
 
     // Center and scale the model
     centerAndScaleModel(model, modelSize);
@@ -140,6 +142,27 @@ export async function loadPetModel(scene, modelSize) {
             blinkAction.weight = 1.0;
             actions.blink = blinkAction;
             blinkFunction();
+        }
+
+        // Add the heavy_push animation if it exists
+        const pushClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "heavy_push",
+        );
+        if (pushClip) {
+            const pushAction = mixer.clipAction(pushClip);
+            actions.push = pushAction;
+        }
+
+        // const arms out (additive, toggleable)
+        const armsOutClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "arms_out",
+        );
+        if (armsOutClip) {
+            //THREE.AnimationUtils.makeClipAdditive(armsOutClip);
+            const armsOutAction = mixer.clipAction(armsOutClip);
+            armsOutAction.setLoop(THREE.LoopRepeat, Infinity);
+            armsOutAction.weight = 1.0;
+            actions.armsOut = armsOutAction;
         }
     }
 
