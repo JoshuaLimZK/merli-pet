@@ -23,7 +23,7 @@ import {
     pickWanderTarget,
 } from "./state/petBehavior.js";
 import { createImageDragWindow } from "./windows/image-drag-in/main.js";
-import { dragInRandomImage } from "./systems/imageDragInSystem.js";
+import { transitionToState } from "./state/petBehavior.js";
 import path from "path";
 // ======================
 // OpenAI Module
