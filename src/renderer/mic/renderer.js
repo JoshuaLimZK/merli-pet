@@ -55,7 +55,7 @@ const _window = /** @type {any} */ (window);
 
 /** @type {ElevenLabsConfig} */
 const ELEVENLABS_CONFIG = {
-    voiceId: "Xb7hH8MSUJpSbSDYk0k2",
+    voiceId: "Y7xQSS5ZtS4xv4VJotWd",
     model: "eleven_flash_v2_5",
 };
 
@@ -809,17 +809,12 @@ _window.merli = {
 // ===================================
 window.addEventListener("DOMContentLoaded", initialize);
 
-import { type } from "os";
 // ===================================
 // Bus Tooling
 // ===================================
 
-import path from "path";
-
 function getBusStopCode() {
-    return fetch(path.join(__dirname, "../../../assets/bus-stops.json")).then(
-        (res) => res.json(),
-    );
+    return fetch("../../assets/bus_stops.json").then((res) => res.json());
 }
 
 async function getBusTiming(busStop, busNumber) {

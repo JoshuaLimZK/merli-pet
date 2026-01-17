@@ -158,25 +158,25 @@ ipcMain.on("show-quote", (_event, { text, duration }) => {
 /** @type {string[]} */
 const quotes = [
     "Whoever controls the pantry must have that iron in him.",
-  "Ms Ting, what are you doing?! Why you never reply my Telegram?",
-  "We have a plan for the East Coast portion of our dinner menu.",
-  "That really warms the cockles of my heart.",
-  "Is it because I’m Chinese?!",
-  "Mee Siam Mai Hum.",
-  "You are nothing but a prostitute!",
-  "4pm at Pioneer Mall, we settle.",
-  "It's on auto-lock by the way.",
-  "Even from my sick bed, if I feel the meeting is going wrong, I will get up.",
-  "Drop like grapes.",
-  "Running is like this!",
-  "Ms Ting, what are you doing? Don't eat my fries!",
-  "Whoever finishes the last of the coffee must have that iron in him.",
-  "Pattern more than badminton.",
-  "Own time, own target, own self check.",
-  "This is not a game of cards. This is our group project.",
-  "Ms Ting, what are you doing?! Why you never approve my leave?",
-  "I look left, look right for my Grab rider.",
-  "Small spaces are enough for things other than children."
+    "Ms Ting, what are you doing?! Why you never reply my Telegram?",
+    "We have a plan for the East Coast portion of our dinner menu.",
+    "That really warms the cockles of my heart.",
+    "Is it because I’m Chinese?!",
+    "Mee Siam Mai Hum.",
+    "You are nothing but a prostitute!",
+    "4pm at Pioneer Mall, we settle.",
+    "It's on auto-lock by the way.",
+    "Even from my sick bed, if I feel the meeting is going wrong, I will get up.",
+    "Drop like grapes.",
+    "Running is like this!",
+    "Ms Ting, what are you doing? Don't eat my fries!",
+    "Whoever finishes the last of the coffee must have that iron in him.",
+    "Pattern more than badminton.",
+    "Own time, own target, own self check.",
+    "This is not a game of cards. This is our group project.",
+    "Ms Ting, what are you doing?! Why you never approve my leave?",
+    "I look left, look right for my Grab rider.",
+    "Small spaces are enough for things other than children.",
 ];
 
 /**
@@ -571,7 +571,7 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
-    micWindow = createMicWindow(false);
+    micWindow = createMicWindow(true);
     setupPushToTalk();
     // determine at startup whether wallpaper operations work on this host
     const petWindow = createPetWindow(!app.isPackaged);
