@@ -108,6 +108,7 @@ function startPetUpdateLoop() {
                     break;
 
                 case "idle":
+                    onIdle(petWindow);
                     break;
             }
         },
@@ -131,7 +132,7 @@ function startPetUpdateLoop() {
  * @param {number} targetX
  * @param {number} targetY
  * @param {number} speed
- * @returns {void}
+ * @returns {boolean} - Returns true if the pet is still moving, false if it has reached the target.
  */
 function petMoveTo(petWindow, targetX, targetY, speed) {
     if (!petWindow || petWindow.isDestroyed()) return;
@@ -184,20 +185,22 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
     clearInterval(mainLoop);
 
     const targetX = screen.getPrimaryDisplay().workAreaSize.width;
-    const targetY = screen.getPrimaryDisplay().workAreaSize.height / 2;
+    const targetY = Math.floor(
+        Math.random() * screen.getPrimaryDisplay().workAreaSize.height,
+    );
 
     const dragInImageLoop = setInterval(() => {
         const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
         let moved = petMoveTo(petWindow, targetX, targetY, 3);
         if (!moved) {
-            slideInFromRight(imageDragWindow, 400, 400, 3);
+            slideInFromRight(imageDragWindow, 400, 400, 3, targetY - 200);
             const pullOutLoop = setInterval(() => {
                 const { x: petWindowCurrentX, y: petWindowCurrentY } =
                     getPetPosition();
                 let movedBack = petMoveTo(
                     petWindow,
                     screen.getPrimaryDisplay().workAreaSize.width - 400,
-                    screen.getPrimaryDisplay().workAreaSize.height / 2,
+                    targetY,
                     3,
                 );
                 if (!movedBack) {

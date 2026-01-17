@@ -51,8 +51,6 @@ const { contextBridge, ipcRenderer } = require("electron");
  */
 
 contextBridge.exposeInMainWorld("electronAPI", {
-    onMouseMove: (/** @type {MouseMoveCallback} */ callback) =>
-        ipcRenderer.on("mouse-move", (_event, data) => callback(data)),
     onBehaviorStateChange: (/** @type {BehaviorStateCallback} */ callback) =>
         ipcRenderer.on("behavior-state-change", (_event, data) =>
             callback(data),
