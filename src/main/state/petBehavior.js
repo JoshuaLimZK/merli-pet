@@ -2,7 +2,7 @@
 import { screen } from "electron";
 import { PET_BEHAVIOR, PET_WINDOW } from "../windows/pet/config.js";
 /**
- * @typedef {'follow' | 'wander' | 'idle' | 'dragging' | 'talking' | "imageDragIn"} PetBehaviorState
+ * @typedef {'follow' | 'wander' | 'idle' | 'dragging' | 'talking' | "imageDragIn" | "flagPole"} PetBehaviorState
  */
 
 /**
@@ -136,6 +136,8 @@ function transitionToState(
         case "talking":
             break;
         case "imageDragIn":
+            break;
+        case "flagPole":
             break;
     }
 

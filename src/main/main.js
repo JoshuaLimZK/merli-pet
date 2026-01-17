@@ -32,6 +32,8 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 import { createAdminWindow } from "./windows/admin/main.js";
+import { flagPoleAnimation } from "./windows/flagpole/main.js";
+import { petMoveTo } from "./movement/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -122,6 +124,12 @@ ipcMain.on("admin-set-state", (_event, state) => {
         if (petWindow) {
             transitionToState("imageDragIn", false, 10000);
             dragInRandomImage(petWindow, createImageDragWindow(), null);
+        }
+    } else if (state === "flagPole") {
+        const petWindow = getPetWindow();
+        if (petWindow) {
+            transitionToState("flagPole", false, Infinity);
+            flagPoleAnimation(petWindow);
         }
     } else {
         transitionToState(state, false, 10000);
@@ -340,71 +348,6 @@ function startPetUpdateLoop() {
         Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
     );
 }
-
-// ======================
-// Movement to x y Function
-// ======================
-
-/**
- * @typedef {Object} Point
- * @property {number} x
- * @property {number} y
- */
-
-/**
- * Moves the pet window toward a target position at a given speed.
- * @param {Electron.BrowserWindow} petWindow
- * @param {number} targetX
- * @param {number} targetY
- * @param {number} speed
- * @returns {boolean} - Returns true if the pet is still moving, false if it has reached the target.
- */
-function petMoveTo(petWindow, targetX, targetY, speed) {
-    if (!petWindow || petWindow.isDestroyed()) return false;
-    /** @type {Point} */
-    const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
-    let deltaXToTarget = targetX - petWindowCurrentX;
-    let deltaYToTarget = targetY - petWindowCurrentY;
-    let distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
-
-    if (distanceToTarget > 0) {
-        const directionX = deltaXToTarget / distanceToTarget;
-        const directionY = deltaYToTarget / distanceToTarget;
-
-        let moveX = directionX * speed;
-        let moveY = directionY * speed;
-        const moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
-
-        if (moveDistance > distanceToTarget) {
-            moveX = deltaXToTarget;
-            moveY = deltaYToTarget;
-        }
-
-        const newX = petWindowCurrentX + moveX;
-        const newY = petWindowCurrentY + moveY;
-        setPetPosition(newX, newY);
-
-        const petWindowX = Math.round(newX - PET_WINDOW.SIZE / 2);
-        const petWindowY = Math.round(newY - PET_WINDOW.SIZE / 2);
-
-        // Use setBounds instead of setPosition to prevent window size drift on Windows
-        petWindow.setBounds({
-            x: petWindowX,
-            y: petWindowY,
-            width: PET_WINDOW.SIZE,
-            height: PET_WINDOW.SIZE,
-        });
-        petWindow.webContents.send("on-move", {
-            stopped: false,
-            angle: Math.atan2(deltaXToTarget, deltaYToTarget),
-        });
-        return true;
-    } else {
-        petWindow.webContents.send("on-move", { stopped: true, angle: 0 });
-        return false;
-    }
-}
-
 /**
  * Drags in a random image from the right side of the screen
  * @param {Electron.BrowserWindow} petWindow - The pet window
