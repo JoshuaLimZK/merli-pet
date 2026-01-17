@@ -110,6 +110,18 @@ function updatemodel(petWindow) {
             );
             break;
         }
+
+        case "imageDragIn": {
+            const wanderTargetX = screen.getPrimaryDisplay().workAreaSize.width;
+            const wanderTargetY =
+                screen.getPrimaryDisplay().workAreaSize.height / 2;
+            let deltaXWanderToWindow = wanderTargetX - petWindowCurrentX;
+            let deltaYWanderToWindow = wanderTargetY - petWindowCurrentY;
+            angleToTarget = Math.atan2(
+                deltaXWanderToWindow,
+                deltaYWanderToWindow,
+            );
+        }
     }
     let distanceMouseToWindow = Math.hypot(
         deltaXMouseToWindow,
@@ -239,6 +251,7 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
             petWindowCurrentY - targetY < 0.5
         ) {
             slideInFromRight(imageDragWindow, 400, 400, 3);
+            petWindow.webContents.send("image-drag-in-start");
             clearInterval(dragInImageLoop);
         }
     }, 10);
@@ -299,8 +312,10 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
-    createPetWindow(!app.isPackaged);
-    startPetUpdateLoop();
+    const petWindow = createPetWindow(!app.isPackaged);
+    petWindow.once("ready-to-show", () => {
+        startPetUpdateLoop();
+    });
     // create bus window
     const busWindow = new BrowserWindow({
         width: 400,
@@ -317,8 +332,9 @@ app.on("window-all-closed", () => {
 
 app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-        createPetWindow(!app.isPackaged);
-
-        startPetUpdateLoop();
+        const petWindow = createPetWindow(!app.isPackaged);
+        petWindow.once("ready-to-show", () => {
+            startPetUpdateLoop();
+        });
     }
 });

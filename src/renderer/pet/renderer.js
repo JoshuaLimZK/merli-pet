@@ -42,7 +42,7 @@ const win = /** @type {any} */ (window);
         CAMERA_CONFIG.FOV,
         CAMERA_CONFIG.ASPECT,
         CAMERA_CONFIG.NEAR,
-        CAMERA_CONFIG.FAR
+        CAMERA_CONFIG.FAR,
     );
     camera.position.z = CAMERA_CONFIG.POSITION_Z;
     camera.position.y = CAMERA_CONFIG.POSITION_Y;
@@ -59,18 +59,18 @@ const win = /** @type {any} */ (window);
     // Lighting
     const ambientLight = new THREE.AmbientLight(
         LIGHTING_CONFIG.AMBIENT_COLOR,
-        LIGHTING_CONFIG.AMBIENT_INTENSITY
+        LIGHTING_CONFIG.AMBIENT_INTENSITY,
     );
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(
         LIGHTING_CONFIG.DIRECTIONAL_COLOR,
-        LIGHTING_CONFIG.DIRECTIONAL_INTENSITY
+        LIGHTING_CONFIG.DIRECTIONAL_INTENSITY,
     );
     directionalLight.position.set(
         LIGHTING_CONFIG.DIRECTIONAL_POSITION.x,
         LIGHTING_CONFIG.DIRECTIONAL_POSITION.y,
-        LIGHTING_CONFIG.DIRECTIONAL_POSITION.z
+        LIGHTING_CONFIG.DIRECTIONAL_POSITION.z,
     );
     scene.add(directionalLight);
 
@@ -121,7 +121,7 @@ const win = /** @type {any} */ (window);
     try {
         const { model, mixer, actions } = await loadPetModel(
             scene,
-            PET_CONFIG.MODEL_SIZE
+            PET_CONFIG.MODEL_SIZE,
         );
         petState.model = model;
         petState.mixer = mixer;
@@ -134,7 +134,7 @@ const win = /** @type {any} */ (window);
                     petState.actions,
                     petState.currentState,
                     "walk",
-                    0
+                    0,
                 )
             );
         }
@@ -166,7 +166,7 @@ const win = /** @type {any} */ (window);
                         crossFadeToAction(
                             petState.actions,
                             petState.currentState,
-                            "idle"
+                            "idle",
                         )
                     );
                 }
@@ -182,7 +182,7 @@ const win = /** @type {any} */ (window);
                         crossFadeToAction(
                             petState.actions,
                             petState.currentState,
-                            "float"
+                            "float",
                         )
                     );
                 }
@@ -193,7 +193,8 @@ const win = /** @type {any} */ (window);
                 const isMoving =
                     currentBehaviorState === "wander" ||
                     (currentBehaviorState === "follow" &&
-                        !data.isWithinStopDistance);
+                        !data.isWithinStopDistance) ||
+                    currentBehaviorState === "imageDragIn";
 
                 if (isMoving) {
                     if (
@@ -204,7 +205,7 @@ const win = /** @type {any} */ (window);
                             crossFadeToAction(
                                 petState.actions,
                                 petState.currentState,
-                                "walk"
+                                "walk",
                             )
                         );
                     }
@@ -220,7 +221,7 @@ const win = /** @type {any} */ (window);
                             crossFadeToAction(
                                 petState.actions,
                                 petState.currentState,
-                                "idle"
+                                "idle",
                             )
                         );
                     }
@@ -314,7 +315,7 @@ const win = /** @type {any} */ (window);
                 win.electronAPI.startDrag(dragStartOffset);
                 console.log(
                     "Started dragging pet with offset:",
-                    dragStartOffset
+                    dragStartOffset,
                 );
             }, 300); // Hold time in ms
         }
@@ -464,7 +465,7 @@ const win = /** @type {any} */ (window);
         petState.currentRotationY = lerpRotation(
             petState.currentRotationY,
             petState.targetRotationY,
-            rotationSpeed
+            rotationSpeed,
         );
 
         if (petState.model) {
