@@ -1,7 +1,58 @@
 // @ts-check
 // ===================================
+// Type Definitions
+// ===================================
+
+/**
+ * @typedef {Object} APIKeys
+ * @property {string} [openai] - OpenAI API key
+ * @property {string} [openaiOrgId] - OpenAI organization ID
+ * @property {string} [openaiProjectId] - OpenAI project ID
+ * @property {string} [elevenlabs] - ElevenLabs API key
+ */
+
+/**
+ * @typedef {Object} WindowAPI
+ * @property {() => APIKeys} getAPIKeys
+ * @property {((callback: (text: string) => void) => void)} [onSendMessage]
+ * @property {((callback: () => void) => void)} [onToggleMic]
+ * @property {((callback: () => void) => void)} [onInterrupt]
+ * @property {((callback: () => void) => void)} [onStartMic]
+ * @property {((callback: () => void) => void)} [onStopMic]
+ */
+
+/**
+ * @typedef {Object} MerliState
+ * @property {boolean} isRecording - Whether microphone is recording
+ * @property {boolean} isInitialized - Whether services are initialized
+ * @property {boolean} openAIConnected - Whether OpenAI WebSocket is connected
+ * @property {boolean} elevenLabsConnected - Whether ElevenLabs is available
+ */
+
+/**
+ * @typedef {Object} MerliAPI
+ * @property {() => boolean} toggleMicrophone - Toggle microphone recording
+ * @property {(text: string) => boolean} sendTextMessage - Send text message to OpenAI
+ * @property {() => Promise<void>} interrupt - Interrupt all processes
+ * @property {() => Promise<void>} cleanup - Clean up all resources
+ * @property {() => Promise<void>} initialize - Initialize services
+ * @property {() => MerliState} getState - Get current state
+ */
+
+/** @type {Window & { api: WindowAPI; merli?: MerliAPI }} */
+const _window = /** @type {any} */ (window);
+
+// ===================================
 // Configuration
 // ===================================
+
+/**
+ * @typedef {Object} ElevenLabsConfig
+ * @property {string} voiceId - ElevenLabs voice ID
+ * @property {string} model - ElevenLabs model ID
+ */
+
+/** @type {ElevenLabsConfig} */
 const ELEVENLABS_CONFIG = {
     voiceId: "Xb7hH8MSUJpSbSDYk0k2",
     model: "eleven_flash_v2_5",
@@ -10,36 +61,47 @@ const ELEVENLABS_CONFIG = {
 // ===================================
 // State
 // ===================================
+/** @type {boolean} */
 let isRecording = false;
+/** @type {boolean} */
 let isInitialized = false;
+/** @type {MediaStream | null} */
 let mediaStream = null;
+/** @type {AudioContext | null} */
 let audioContext = null;
+/** @type {AudioWorkletNode | null} */
 let audioWorkletNode = null;
 
 // WebSocket connections
+/** @type {WebSocket | null} */
 let openAIWs = null;
+/** @type {WebSocket | null} */
+let elevenLabsWs = null;
 
 // ElevenLabs streaming
+/** @type {AbortController | null} */
 let currentStreamController = null;
 
 // Audio playback
+/** @type {AudioContext | null} */
 let playbackAudioContext = null;
+/** @type {AudioBufferSourceNode | null} */
 let currentSource = null;
 
 // Response tracking
+/** @type {string} */
 let currentResponse = "";
 
 // Get API keys from preload
-const apiKeys = window.api.getAPIKeys();
+const apiKeys = _window.api.getAPIKeys();
 
 // ===================================
 // UI Elements
 // ===================================
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-const statusDiv = document.getElementById("status");
-const transcriptionDiv = document.getElementById("transcription");
-const responseDiv = document.getElementById("response");
+/** @type {HTMLButtonElement | null} */
+const micBtn = /** @type {HTMLButtonElement | null} */ (
+    document.getElementById("micBtn")
+);
 
 // ===================================
 // ElevenLabs HTTP Streaming
@@ -90,7 +152,9 @@ async function streamElevenLabsAudio(text) {
         if (!response.ok) {
             throw new Error(`ElevenLabs API error: ${response.status}`);
         }
-
+        if (!response.body) {
+            throw new Error("ElevenLabs response has no body");
+        }
         const reader = response.body.getReader();
         const chunks = [];
 
@@ -118,7 +182,7 @@ async function streamElevenLabsAudio(text) {
         await playAudioBuffer(combined.buffer);
         console.log("✅ ElevenLabs stream complete");
     } catch (error) {
-        if (error.name === "AbortError") {
+        if (error instanceof Error && error.name === "AbortError") {
             console.log("🛑 ElevenLabs stream cancelled");
         } else {
             console.error("❌ ElevenLabs stream error:", error);
@@ -130,6 +194,7 @@ async function streamElevenLabsAudio(text) {
 
 /**
  * Cancel any ongoing ElevenLabs stream
+ * @returns {void}
  */
 function cancelElevenLabsStream() {
     if (currentStreamController) {
@@ -141,6 +206,12 @@ function cancelElevenLabsStream() {
 // ===================================
 // OpenAI WebSocket
 // ===================================
+
+/**
+ * Initialize OpenAI Realtime WebSocket connection
+ * @returns {Promise<boolean>} Resolves when connected
+ * @throws {Error} If no API key provided or connection fails
+ */
 async function initializeOpenAI() {
     if (!apiKeys.openai) {
         throw new Error("No OpenAI API key provided");
@@ -164,6 +235,7 @@ async function initializeOpenAI() {
 
         openAIWs.onopen = () => {
             console.log("✅ OpenAI connected");
+            if (!openAIWs) return;
             openAIWs.send(
                 JSON.stringify({
                     type: "session.update",
@@ -207,6 +279,10 @@ async function initializeOpenAI() {
     });
 }
 
+/**
+ * Close the OpenAI WebSocket connection
+ * @returns {void}
+ */
 function closeOpenAI() {
     if (openAIWs) {
         openAIWs.close();
@@ -214,11 +290,20 @@ function closeOpenAI() {
     }
 }
 
+/**
+ * Handle incoming OpenAI WebSocket events
+ * @param {Object} event - The parsed WebSocket message event
+ * @param {string} event.type - Event type
+ * @param {string} [event.transcript] - Transcription text (for transcription events)
+ * @param {string} [event.delta] - Delta text (for streaming events)
+ * @param {Object} [event.error] - Error object (for error events)
+ * @returns {void}
+ */
 function handleOpenAIEvent(event) {
     switch (event.type) {
         case "conversation.item.input_audio_transcription.completed":
             console.log("📝 Transcription:", event.transcript);
-            if (transcriptionDiv) {
+            if (transcriptionDiv && event.transcript) {
                 transcriptionDiv.textContent = event.transcript;
             }
             break;
@@ -260,7 +345,8 @@ function handleOpenAIEvent(event) {
 async function playAudioBuffer(arrayBuffer) {
     if (!playbackAudioContext) {
         playbackAudioContext = new (
-            window.AudioContext || window.webkitAudioContext
+            window.AudioContext ||
+            /** @type {any} */ (window).webkitAudioContext
         )();
     }
 
@@ -290,6 +376,10 @@ async function playAudioBuffer(arrayBuffer) {
     }
 }
 
+/**
+ * Stop audio playback and cleanup playback resources
+ * @returns {void}
+ */
 function stopAudioPlayback() {
     // Cancel any ongoing stream
     cancelElevenLabsStream();
@@ -297,8 +387,8 @@ function stopAudioPlayback() {
     if (currentSource) {
         try {
             currentSource.stop();
-        } catch (e) {
-            // Source may have already stopped
+        } catch {
+            // Ignore errors on stopping
         }
         currentSource = null;
     }
@@ -313,6 +403,11 @@ function stopAudioPlayback() {
 // ===================================
 // Microphone Control
 // ===================================
+
+/**
+ * Start microphone capture and send audio to OpenAI
+ * @returns {Promise<void>}
+ */
 async function startMicrophone() {
     if (isRecording) return;
 
@@ -336,7 +431,7 @@ async function startMicrophone() {
                 const base64Audio = btoa(
                     String.fromCharCode.apply(
                         null,
-                        new Uint8Array(pcm16.buffer),
+                        Array.from(new Uint8Array(pcm16.buffer)),
                     ),
                 );
                 openAIWs.send(
@@ -357,10 +452,17 @@ async function startMicrophone() {
         console.log("🎤 Started recording");
     } catch (error) {
         console.error("Error starting microphone:", error);
-        updateUI("error", error.message);
+        updateUI(
+            "error",
+            error instanceof Error ? error.message : String(error),
+        );
     }
 }
 
+/**
+ * Stop microphone capture and commit audio buffer to OpenAI
+ * @returns {Promise<void>}
+ */
 async function stopMicrophone() {
     if (!isRecording) return;
 
@@ -394,6 +496,10 @@ async function stopMicrophone() {
     setTimeout(() => updateUI("ready"), 2000);
 }
 
+/**
+ * Toggle microphone recording state
+ * @returns {boolean} New recording state after toggle
+ */
 function toggleMicrophone() {
     if (isRecording) {
         stopMicrophone();
@@ -406,6 +512,12 @@ function toggleMicrophone() {
 // ===================================
 // Send Text Message (from main process)
 // ===================================
+
+/**
+ * Send a text message to OpenAI for processing
+ * @param {string} text - The text message to send
+ * @returns {boolean} Whether the message was sent successfully
+ */
 function sendTextMessage(text) {
     if (!openAIWs || openAIWs.readyState !== WebSocket.OPEN) {
         console.error("OpenAI WebSocket not connected");
@@ -433,6 +545,11 @@ function sendTextMessage(text) {
 // ===================================
 // Interrupt - Stop Everything
 // ===================================
+
+/**
+ * Interrupt all ongoing processes (recording, playback, OpenAI response)
+ * @returns {Promise<void>}
+ */
 async function interrupt() {
     console.log("🛑 Interrupting all processes...");
 
@@ -459,6 +576,11 @@ async function interrupt() {
 // ===================================
 // Cleanup - Close All Connections
 // ===================================
+
+/**
+ * Clean up all resources and close connections
+ * @returns {Promise<void>}
+ */
 async function cleanup() {
     console.log("🧹 Cleaning up...");
 
@@ -478,46 +600,37 @@ async function cleanup() {
 // ===================================
 // UI Updates
 // ===================================
+
+/**
+ * Update UI elements based on current state
+ * @param {'initializing' | 'ready' | 'recording' | 'processing' | 'error'} state - Current state
+ * @param {string} [errorMsg=''] - Error message (for 'error' state)
+ * @returns {void}
+ */
 function updateUI(state, errorMsg = "") {
+    if (!micBtn) return;
+
     switch (state) {
         case "initializing":
-            if (statusDiv) statusDiv.textContent = "Initializing...";
-            if (startBtn) startBtn.disabled = true;
-            if (stopBtn) stopBtn.disabled = true;
+            micBtn.disabled = true;
+            micBtn.classList.remove("recording");
             break;
         case "ready":
-            if (statusDiv) {
-                statusDiv.textContent = "Ready! Click 'Start' to begin";
-                statusDiv.classList.remove("listening");
-            }
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            micBtn.disabled = false;
+            micBtn.classList.remove("recording");
             break;
         case "recording":
-            if (statusDiv) {
-                statusDiv.textContent = "🎤 Listening...";
-                statusDiv.classList.add("listening");
-            }
-            if (startBtn) startBtn.disabled = true;
-            if (stopBtn) stopBtn.disabled = false;
-            if (transcriptionDiv) transcriptionDiv.textContent = "";
-            if (responseDiv) responseDiv.textContent = "";
+            micBtn.disabled = false;
+            micBtn.classList.add("recording");
             break;
         case "processing":
-            if (statusDiv) {
-                statusDiv.textContent = "Processing...";
-                statusDiv.classList.remove("listening");
-            }
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            micBtn.disabled = false;
+            micBtn.classList.remove("recording");
             break;
         case "error":
-            if (statusDiv) {
-                statusDiv.textContent = `❌ Error: ${errorMsg}`;
-                statusDiv.classList.remove("listening");
-            }
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            console.error("Mic error:", errorMsg);
+            micBtn.disabled = false;
+            micBtn.classList.remove("recording");
             break;
     }
 }
@@ -525,6 +638,11 @@ function updateUI(state, errorMsg = "") {
 // ===================================
 // Initialize
 // ===================================
+
+/**
+ * Initialize audio services (OpenAI and ElevenLabs)
+ * @returns {Promise<void>}
+ */
 async function initialize() {
     if (isInitialized) return;
 
@@ -544,38 +662,44 @@ async function initialize() {
         updateUI("ready");
     } catch (error) {
         console.error("Initialization error:", error);
-        updateUI("error", error.message);
+        updateUI(
+            "error",
+            error instanceof Error ? error.message : String(error),
+        );
     }
 }
 
 // ===================================
 // Event Listeners
 // ===================================
-if (startBtn) startBtn.addEventListener("click", startMicrophone);
-if (stopBtn) stopBtn.addEventListener("click", stopMicrophone);
+if (micBtn) {
+    micBtn.addEventListener("click", () => {
+        toggleMicrophone();
+    });
+}
 
 // Listen for IPC messages from main process
-if (window.api.onSendMessage) {
-    window.api.onSendMessage((text) => sendTextMessage(text));
+if (_window.api.onSendMessage) {
+    _window.api.onSendMessage((text) => sendTextMessage(text));
 }
-if (window.api.onToggleMic) {
-    window.api.onToggleMic(() => toggleMicrophone());
+if (_window.api.onToggleMic) {
+    _window.api.onToggleMic(() => toggleMicrophone());
 }
-if (window.api.onInterrupt) {
-    window.api.onInterrupt(() => interrupt());
+if (_window.api.onInterrupt) {
+    _window.api.onInterrupt(() => interrupt());
 }
 
 // Push-to-talk listeners
-if (window.api.onStartMic) {
-    window.api.onStartMic(() => {
+if (_window.api.onStartMic) {
+    _window.api.onStartMic(() => {
         if (!isRecording) {
             console.log("🎤 Push-to-talk: Starting mic");
             startMicrophone();
         }
     });
 }
-if (window.api.onStopMic) {
-    window.api.onStopMic(() => {
+if (_window.api.onStopMic) {
+    _window.api.onStopMic(() => {
         if (isRecording) {
             console.log("🎤 Push-to-talk: Stopping mic");
             stopMicrophone();
@@ -586,7 +710,9 @@ if (window.api.onStopMic) {
 // ===================================
 // Expose API to window (for debugging and IPC)
 // ===================================
-window.merli = {
+
+/** @type {MerliAPI} */
+_window.merli = {
     toggleMicrophone,
     sendTextMessage,
     interrupt,

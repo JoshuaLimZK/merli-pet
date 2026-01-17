@@ -1,12 +1,19 @@
-// Audio Worklet Processor for capturing microphone input
+/// <reference lib="dom" />
 class AudioCaptureProcessor extends AudioWorkletProcessor {
-    process(inputs, outputs, parameters) {
+    /**
+     * Process audio input and convert to PCM16
+     * @param {Float32Array[][]} inputs - Input audio buffers [input][channel][sample]
+     * @returns {boolean} Return true to keep processor alive
+     */
+    process(inputs) {
         const input = inputs[0];
 
         if (input.length > 0) {
+            /** @type {Float32Array} */
             const channelData = input[0]; // Get first channel
 
             // Convert Float32Array to Int16Array (PCM16)
+            /** @type {Int16Array} */
             const pcm16 = new Int16Array(channelData.length);
             for (let i = 0; i < channelData.length; i++) {
                 const s = Math.max(-1, Math.min(1, channelData[i]));

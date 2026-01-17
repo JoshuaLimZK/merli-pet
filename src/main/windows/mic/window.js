@@ -1,5 +1,5 @@
 // @ts-check
-import { BrowserWindow } from "electron";
+import { BrowserWindow, screen } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,13 +24,22 @@ export function getMicWindow() {
  * @returns {BrowserWindow}
  */
 export function createMicWindow(isDevelopment) {
+    const display = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = display.workAreaSize;
+
+    const windowSize = 64;
+    const margin = 20;
+
     micWindow = new BrowserWindow({
-        width: 400,
-        height: 300,
-        frame: true,
-        transparent: false,
+        width: windowSize,
+        height: windowSize,
+        x: screenWidth - windowSize - margin,
+        y: screenHeight - windowSize - margin,
+        frame: false,
+        transparent: true,
         alwaysOnTop: true,
         resizable: false,
+        skipTaskbar: true,
         webPreferences: {
             contextIsolation: true,
             preload: path.join(__dirname, "preload.js"),
