@@ -16,7 +16,8 @@ const {
     onStateChange,
     checkStateTransition,
 } = require("./state/petBehavior");
-
+const { createImageDragWindow } = require("./windows/image-drag-in/main");
+const { dragInRandomImage } = require("./systems/imageDragInSystem");
 // ======================
 // OpenAI Module
 // ======================
@@ -46,7 +47,15 @@ function startPetUpdateLoop() {
             const petWindow = getPetWindow();
             if (!petWindow) return;
 
-            checkStateTransition();
+            const didTransition = checkStateTransition();
+
+            // start image drag in with small probability
+            // if (didTransition && Math.random() < 1) {
+            //     petBehavior.previousState = petBehavior.state;
+            //     petBehavior.state = "imageDragIn";
+            //     dragInRandomImage(petWindow, createImageDragWindow());
+            //     return;
+            // }
 
             const mousePosition = screen.getCursorScreenPoint();
             const mousePositionX = mousePosition.x;
@@ -126,32 +135,101 @@ function startPetUpdateLoop() {
                     shouldMove = false;
                     break;
             }
-
-            if (shouldMove && distanceToTarget > 0) {
-                const directionX = deltaXToTarget / distanceToTarget;
-                const directionY = deltaYToTarget / distanceToTarget;
-
-                let moveX = directionX * speed;
-                let moveY = directionY * speed;
-                const moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
-
-                if (moveDistance > distanceToTarget) {
-                    moveX = deltaXToTarget;
-                    moveY = deltaYToTarget;
-                }
-
-                const newX = petWindowCurrentX + moveX;
-                const newY = petWindowCurrentY + moveY;
-                setPetPosition(newX, newY);
-
-                const petWindowX = Math.round(newX - PET_WINDOW.SIZE / 2);
-                const petWindowY = Math.round(newY - PET_WINDOW.SIZE / 2);
-
-                petWindow.setPosition(petWindowX, petWindowY, false);
+            if (shouldMove) {
+                petMoveTo(petWindow, targetX, targetY, speed);
             }
         },
         Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
     );
+}
+
+// ======================
+// Movement to x y Function
+// ======================
+
+/**
+ * @typedef {Object} Point
+ * @property {number} x
+ * @property {number} y
+ */
+
+/**
+ * Moves the pet window toward a target position at a given speed.
+ * @param {Electron.BrowserWindow} petWindow
+ * @param {number} targetX
+ * @param {number} targetY
+ * @param {number} speed
+ * @returns {void}
+ */
+function petMoveTo(petWindow, targetX, targetY, speed) {
+    if (!petWindow || petWindow.isDestroyed()) return;
+    /** @type {Point} */
+    const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
+    let deltaXToTarget = targetX - petWindowCurrentX;
+    let deltaYToTarget = targetY - petWindowCurrentY;
+    let distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
+    let angleToTarget = Math.atan2(deltaXToTarget, deltaYToTarget);
+
+    if (distanceToTarget > 0) {
+        const directionX = deltaXToTarget / distanceToTarget;
+        const directionY = deltaYToTarget / distanceToTarget;
+
+        let moveX = directionX * speed;
+        let moveY = directionY * speed;
+        const moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
+
+        if (moveDistance > distanceToTarget) {
+            moveX = deltaXToTarget;
+            moveY = deltaYToTarget;
+        }
+
+        const newX = petWindowCurrentX + moveX;
+        const newY = petWindowCurrentY + moveY;
+        setPetPosition(newX, newY);
+
+        const petWindowX = Math.round(newX - PET_WINDOW.SIZE / 2);
+        const petWindowY = Math.round(newY - PET_WINDOW.SIZE / 2);
+
+        petWindow.setPosition(petWindowX, petWindowY, false);
+    }
+}
+
+// ======================
+// Window slide in function from right
+// ======================
+
+/**
+ * Animates a window sliding in from the right side of the screen.
+ * @param {Electron.BrowserWindow} window - The window to animate
+ * @param {number} width - The target width of the window in pixels
+ * @param {number} height - The target height of the window in pixels
+ * @param {number} [speed=2] - The animation speed in pixels per frame
+ * @param {number} [y=Math.floor(screen.getPrimaryDisplay().workAreaSize.height / 2 - height / 2)] - The vertical position of the window in pixels
+ * @returns {void}
+ */
+
+function slideInFromRight(
+    window,
+    width,
+    height,
+    speed = 2,
+    y = Math.floor(
+        screen.getPrimaryDisplay().workAreaSize.height / 2 - height / 2,
+    ),
+) {
+    let x = screen.getPrimaryDisplay().workAreaSize.width;
+    window.setSize(0, height);
+    window.setPosition(x, y);
+    window.setSize(width, height);
+    window.show();
+    const interval = setInterval(() => {
+        if (x > screen.getPrimaryDisplay().workAreaSize.width - width) {
+            x -= speed;
+            window.setPosition(x, y);
+        } else {
+            clearInterval(interval);
+        }
+    }, 10);
 }
 
 // ======================
@@ -172,7 +250,8 @@ onStateChange((newState) => {
 // ======================
 app.whenReady().then(() => {
     createPetWindow(!app.isPackaged);
-
+    let imageDragWindow = createImageDragWindow();
+    slideInFromRight(imageDragWindow, 400, 400, 10);
     startPetUpdateLoop();
 });
 
