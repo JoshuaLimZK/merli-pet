@@ -258,6 +258,36 @@ async function initializeOpenAI() {
                                 turn_detection: null,
                             },
                         },
+                        tool_choice: "auto",
+                        tools: [
+                            {
+                                type: "function",
+                                description:
+                                    "Get an object with all bus stop codes",
+                                name: "getBusStopCode",
+                                parameters: null,
+                            },
+                            {
+                                type: "function",
+                                description:
+                                    "Get the bus arrival time for a given bus stop and bus number",
+                                name: "getBusTiming",
+                                parameters: {
+                                    type: "object",
+                                    properties: {
+                                        busStop: {
+                                            type: "string",
+                                            description: "The bus stop code",
+                                        },
+                                        busNumber: {
+                                            type: "string",
+                                            description: "The bus number",
+                                        },
+                                    },
+                                    required: ["busStop", "busNumber"],
+                                },
+                            },
+                        ],
                     },
                 }),
             );
@@ -301,6 +331,8 @@ function closeOpenAI() {
  * @returns {void}
  */
 function handleOpenAIEvent(event) {
+    // let functionCalled = "";
+
     switch (event.type) {
         case "conversation.item.input_audio_transcription.completed":
             console.log("📝 Transcription:", event.transcript);
@@ -336,6 +368,39 @@ function handleOpenAIEvent(event) {
             }
             currentResponse = "";
             break;
+
+        // case "response.function_call_arguments.done":
+        //     if (event.function_name === "getBusStopCode") {
+        //         getBusStopCode().then((busStops) => {
+        //             if (openAIWs?.readyState === WebSocket.OPEN) {
+        //                 openAIWs.send(
+        //                     JSON.stringify({
+        //                         type: "response.function_call_arguments.result",
+        //                         function_name: "getBusStopCode",
+        //                         arguments: {
+        //                             busStops,
+        //                         },
+        //                     }),
+        //                 );
+        //             }
+        //         });
+        //     } else if (event.function_name === "getBusTiming") {
+        //         const { busStop, busNumber } = event.arguments;
+        //         getBusTiming(busStop, busNumber).then((timing) => {
+        //             if (openAIWs?.readyState === WebSocket.OPEN) {
+        //                 openAIWs.send(
+        //                     JSON.stringify({
+        //                         type: "response.function_call_arguments.result",
+        //                         function_name: "getBusTiming",
+        //                         arguments: {
+        //                             timing,
+        //                         },
+        //                     }),
+        //                 );
+        //             }
+        //         });
+        //     }
+        //     break;
 
         case "error":
             console.error("OpenAI error:", event.error);
@@ -743,3 +808,36 @@ _window.merli = {
 // Initialize on Load
 // ===================================
 window.addEventListener("DOMContentLoaded", initialize);
+
+import { type } from "os";
+// ===================================
+// Bus Tooling
+// ===================================
+
+import path from "path";
+
+function getBusStopCode() {
+    return fetch(path.join(__dirname, "../../../assets/bus-stops.json")).then(
+        (res) => res.json(),
+    );
+}
+
+async function getBusTiming(busStop, busNumber) {
+    const response = await fetch(
+        `https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival?BusStopCode=${busStop}&ServiceNo=${busNumber}`,
+        {
+            method: "GET",
+            headers: {
+                AccountKey: "kMLW3vYRTY2aN47TljPPBA==",
+            },
+        },
+    );
+    const data = await response.json();
+    return data.Services[0].NextBus.EstimatedArrival
+        ? Math.ceil(
+              (new Date(data.Services[0].NextBus.EstimatedArrival) -
+                  new Date()) /
+                  60000,
+          ) + " Mins"
+        : "No Arrival Info";
+}

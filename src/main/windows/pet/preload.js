@@ -96,6 +96,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
         ipcRenderer.on("play-animation", (_event, data) => callback(data)),
     onToggleAnimation: (/** @type {ToggleAnimationCallback} */ callback) =>
         ipcRenderer.on("toggle-animation", (_event, data) => callback(data)),
+    onMusicIdlePlay: (/** @type {() => void} */ callback) =>
+        ipcRenderer.on("play-idle-music", () => callback()),
+    onMusicIdleStop: (/** @type {() => void} */ callback) =>
+        ipcRenderer.on("stop-idle-music", () => callback()),
+    onMouseMove: (/** @type {MouseMoveCallback} */ callback) =>
+        ipcRenderer.on("mouse-move", (_event, data) => callback(data)),
     getPetConfig: () => ipcRenderer.invoke("get-pet-config"),
     setIgnoreMouseEvents: (/** @type {boolean} */ ignore) =>
         ipcRenderer.send("set-ignore-mouse-events", ignore),

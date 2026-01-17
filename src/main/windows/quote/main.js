@@ -1,5 +1,5 @@
 // @ts-check
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -26,7 +26,7 @@ function createQuoteWindow(petWindow) {
         width: 300,
         height: 100,
         frame: false,
-        transparent: false,
+        transparent: true,
         movable: false,
         alwaysOnTop: true,
         title: "quote-window",
@@ -36,6 +36,13 @@ function createQuoteWindow(petWindow) {
             contextIsolation: true,
             preload: path.join(__dirname, "preload.js"),
         },
+    });
+
+    // Listen for resize requests from the renderer
+    ipcMain.on("resize-quote-window", (event, width, height) => {
+        if (quoteWindow) {
+            quoteWindow.setSize(width, height);
+        }
     });
 
     quoteWindow.loadFile(

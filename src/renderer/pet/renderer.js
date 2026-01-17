@@ -18,6 +18,8 @@ import { crossFadeToAction, lerpRotation } from "./animation.js";
  * @property {(callback: (data: { angle: number }) => void) => void} onSetRotation
  * @property {(callback: (data: { animation: string, duration?: number }) => void) => void} onPlayAnimation
  * @property {(callback: (data: { animation: string, enabled: boolean }) => void) => void} onToggleAnimation
+ * @property {(callback: () => void) => void} onMusicIdlePlay
+ * @property {(callback: () => void) => void} onMusicIdleStop
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: {x: number, y: number}) => void} startDrag
  * @property {() => void} stopDrag
@@ -83,7 +85,7 @@ const win = /** @type {any} */ (window);
     // ============================================================================
 
     /**
-     * @typedef {'idle' | 'walk' | 'float' | 'push'} AnimationState
+     * @typedef {'idle' | 'walk' | 'float' | 'push' | 'dance'} AnimationState
      */
 
     /**
@@ -113,6 +115,10 @@ const win = /** @type {any} */ (window);
 
     /** @type {boolean} */
     let isMouseWithinStopDistance = false;
+    /** @type {boolean} */
+    let isMusicPlaying = false;
+    /** @type {{ stopped: boolean, angle: number }} */
+    let lastMoveState = { stopped: true, angle: 0 };
     /** @type {number} */
     let animationTimeAccumulator = 0;
     /** @type {THREE.Clock} */
@@ -161,25 +167,30 @@ const win = /** @type {any} */ (window);
         win.electronAPI.onMove((data) => {
             const stopped = data.stopped;
             const angle = data.angle;
+            lastMoveState = { stopped, angle };
 
-            if (stopped) {
-                petState.currentState = /** @type {AnimationState} */ (
-                    crossFadeToAction(
-                        petState.actions,
-                        petState.currentState,
-                        "idle",
-                    )
-                );
-                petState.targetRotationY = 0;
+            if (!isMusicPlaying) {
+                if (stopped) {
+                    petState.currentState = /** @type {AnimationState} */ (
+                        crossFadeToAction(
+                            petState.actions,
+                            petState.currentState,
+                            "idle",
+                        )
+                    );
+                    petState.targetRotationY = 0;
+                } else {
+                    petState.currentState = /** @type {AnimationState} */ (
+                        crossFadeToAction(
+                            petState.actions,
+                            petState.currentState,
+                            "walk",
+                        )
+                    );
+                    petState.targetRotationY = angle;
+                }
             } else {
-                petState.currentState = /** @type {AnimationState} */ (
-                    crossFadeToAction(
-                        petState.actions,
-                        petState.currentState,
-                        "walk",
-                    )
-                );
-                petState.targetRotationY = angle;
+                petState.targetRotationY = stopped ? 0 : angle;
             }
         });
 
@@ -224,6 +235,29 @@ const win = /** @type {any} */ (window);
             } else {
                 action.fadeOut(0.3);
             }
+        });
+
+        win.electronAPI.onMusicIdlePlay(() => {
+            isMusicPlaying = true;
+            petState.currentState = /** @type {AnimationState} */ (
+                crossFadeToAction(
+                    petState.actions,
+                    petState.currentState,
+                    "dance",
+                )
+            );
+        });
+
+        win.electronAPI.onMusicIdleStop(() => {
+            isMusicPlaying = false;
+            const nextState = lastMoveState.stopped ? "idle" : "walk";
+            petState.currentState = /** @type {AnimationState} */ (
+                crossFadeToAction(
+                    petState.actions,
+                    petState.currentState,
+                    nextState,
+                )
+            );
         });
     }
 

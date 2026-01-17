@@ -12,6 +12,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
  * @property {THREE.AnimationAction} [idle] - Idle animation action
  * @property {THREE.AnimationAction} [walk] - Walk animation action
  * @property {THREE.AnimationAction} [float] - Float animation action
+ * @property {THREE.AnimationAction} [dance] - Dance animation action
  * @property {THREE.AnimationAction} [blink] - Blinking animation action (additive)
  * @property {THREE.AnimationAction} [push] - Push up animation action
  * @property {THREE.AnimationAction} [armsOut] - Arms out animation action
@@ -83,6 +84,14 @@ export async function loadPetModel(scene, modelSize) {
     const gltf = await loadGLB("../../assets/Merli.glb");
     const model = gltf.scene;
 
+    // Load the dance animation GLB (if available)
+    let danceGltf = null;
+    try {
+        danceGltf = await loadGLB("../../assets/Merli_dance.glb");
+    } catch (error) {
+        console.warn("Failed to load dance animation:", error);
+    }
+
     // Debug: Log model metadata
     debugModelMetadata(gltf);
 
@@ -106,6 +115,15 @@ export async function loadPetModel(scene, modelSize) {
         actions.idle = mixer.clipAction(walkingClip);
         actions.walk = mixer.clipAction(walkingClip);
         actions.float = mixer.clipAction(walkingClip);
+
+        if (danceGltf && danceGltf.animations.length > 0) {
+            const danceClip =
+                danceGltf.animations.find((clip) =>
+                    clip.name.toLowerCase().includes("dance"),
+                ) || danceGltf.animations[0];
+            actions.dance = mixer.clipAction(danceClip);
+            actions.dance.setLoop(THREE.LoopRepeat, Infinity);
+        }
 
         console.log(`Loaded animation "${walkingClip.name}" for all actions`);
 
