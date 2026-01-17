@@ -143,16 +143,26 @@ ipcMain.on("admin-trigger-quote", () => {
 
 /** @type {string[]} */
 const quotes = [
-    "The only way to do great work is to love what you do. - Steve Jobs",
-    "Life is what happens when you're busy making other plans. - John Lennon",
-    "The purpose of our lives is to be happy. - Dalai Lama",
-    "Get busy living or get busy dying. - Stephen King",
-    "You have within you right now, everything you need to deal with whatever the world can throw at you. - Brian Tracy",
-    "Believe you can and you're halfway there. - Theodore Roosevelt",
-    "The best way to predict the future is to invent it. - Alan Kay",
-    "Your time is limited, so don't waste it living someone else's life. - Steve Jobs",
-    "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
-    "Do not watch the clock. Do what it does. Keep going. - Sam Levenson",
+    "Whoever controls the pantry must have that iron in him.",
+  "Ms Ting, what are you doing?! Why you never reply my Telegram?",
+  "We have a plan for the East Coast portion of our dinner menu.",
+  "That really warms the cockles of my heart.",
+  "Is it because I’m Chinese?!",
+  "Mee Siam Mai Hum.",
+  "You are nothing but a prostitute!",
+  "4pm at Pioneer Mall, we settle.",
+  "It's on auto-lock by the way.",
+  "Even from my sick bed, if I feel the meeting is going wrong, I will get up.",
+  "Drop like grapes.",
+  "Running is like this!",
+  "Ms Ting, what are you doing? Don't eat my fries!",
+  "Whoever finishes the last of the coffee must have that iron in him.",
+  "Pattern more than badminton.",
+  "Own time, own target, own self check.",
+  "This is not a game of cards. This is our group project.",
+  "Ms Ting, what are you doing?! Why you never approve my leave?",
+  "I look left, look right for my Grab rider.",
+  "Small spaces are enough for things other than children."
 ];
 
 /**
@@ -301,7 +311,16 @@ function startPetUpdateLoop() {
 
             let didTransition = checkStateTransition();
 
-            if (didTransition && Math.random() < 0.075) {
+            if (didTransition) {
+                console.log(
+                    `🐾 Pet transitioned to state: ${petBehavior.state}`,
+                );
+            }
+            if (didTransition && Math.random() < 0.175) {
+                sendRandomQuote();
+                console.log("Sent random quote due to state transition");
+            }
+            if (didTransition && Math.random() < 0.015) {
                 transitionToState("imageDragIn", false, 10000);
                 console.log("Dragging in random image due to state transition");
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
@@ -610,7 +629,6 @@ app.whenReady().then(() => {
         startPetUpdateLoop();
     });
     adminWindow = createAdminWindow();
-    sendRandomQuote("In my ass there is a rock");
 });
 
 app.on("will-quit", () => {
