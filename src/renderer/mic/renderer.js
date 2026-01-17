@@ -18,11 +18,12 @@ let audioWorkletNode = null;
 
 // WebSocket connections
 let openAIWs = null;
-let elevenLabsWs = null;
+
+// ElevenLabs streaming
+let currentStreamController = null;
 
 // Audio playback
 let playbackAudioContext = null;
-let audioChunks = [];
 let currentSource = null;
 
 // Response tracking
@@ -41,65 +42,99 @@ const transcriptionDiv = document.getElementById("transcription");
 const responseDiv = document.getElementById("response");
 
 // ===================================
-// ElevenLabs WebSocket
+// ElevenLabs HTTP Streaming
 // ===================================
-async function initializeElevenLabs() {
+
+/**
+ * Stream text-to-speech audio from ElevenLabs HTTP endpoint
+ * @param {string} text - The text to convert to speech
+ */
+async function streamElevenLabsAudio(text) {
     if (!apiKeys.elevenlabs) {
         console.warn("No ElevenLabs API key provided");
-        return false;
+        return;
     }
 
-    return new Promise((resolve, reject) => {
-        const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_CONFIG.voiceId}/stream-input?model_id=${ELEVENLABS_CONFIG.model}&inactivity_timeout=180`;
+    if (!text || text.trim().length === 0) {
+        console.warn("No text to speak");
+        return;
+    }
 
-        elevenLabsWs = new WebSocket(uri);
+    console.log("🔊 Starting ElevenLabs stream for:", text);
 
-        elevenLabsWs.onopen = () => {
-            console.log("✅ ElevenLabs connected");
-            elevenLabsWs.send(
-                JSON.stringify({
-                    text: " ",
+    // Create abort controller for cancellation
+    currentStreamController = new AbortController();
+
+    try {
+        const response = await fetch(
+            `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_CONFIG.voiceId}/stream`,
+            {
+                method: "POST",
+                headers: {
+                    "xi-api-key": apiKeys.elevenlabs,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    text,
+                    model_id: ELEVENLABS_CONFIG.model,
                     voice_settings: {
                         stability: 0.5,
                         similarity_boost: 0.8,
                         use_speaker_boost: false,
                     },
-                    generation_config: {
-                        chunk_length_schedule: [120, 160, 250, 290],
-                    },
-                    "xi-api-key": apiKeys.elevenlabs,
                 }),
-            );
-            resolve(true);
-        };
+                signal: currentStreamController.signal,
+            },
+        );
 
-        elevenLabsWs.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.audio) {
-                audioChunks.push(data.audio);
-                console.log(`📦 Audio chunk ${audioChunks.length} received`);
-            }
-            if (data.isFinal) {
-                console.log("🏁 ElevenLabs finished generating audio");
-                playAllAudio();
-            }
-        };
+        if (!response.ok) {
+            throw new Error(`ElevenLabs API error: ${response.status}`);
+        }
 
-        elevenLabsWs.onerror = (error) => {
-            console.error("❌ ElevenLabs error:", error);
-            reject(error);
-        };
+        const reader = response.body.getReader();
+        const chunks = [];
 
-        elevenLabsWs.onclose = () => {
-            console.log("ElevenLabs disconnected");
-        };
-    });
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            chunks.push(value);
+            console.log(`📦 Received chunk: ${value.length} bytes`);
+        }
+
+        // Combine all chunks into one buffer
+        const totalLength = chunks.reduce(
+            (acc, chunk) => acc + chunk.length,
+            0,
+        );
+        const combined = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+            combined.set(chunk, offset);
+            offset += chunk.length;
+        }
+
+        // Play the audio
+        await playAudioBuffer(combined.buffer);
+        console.log("✅ ElevenLabs stream complete");
+    } catch (error) {
+        if (error.name === "AbortError") {
+            console.log("🛑 ElevenLabs stream cancelled");
+        } else {
+            console.error("❌ ElevenLabs stream error:", error);
+        }
+    } finally {
+        currentStreamController = null;
+    }
 }
 
-function closeElevenLabs() {
-    if (elevenLabsWs) {
-        elevenLabsWs.close();
-        elevenLabsWs = null;
+/**
+ * Cancel any ongoing ElevenLabs stream
+ */
+function cancelElevenLabsStream() {
+    if (currentStreamController) {
+        currentStreamController.abort();
+        currentStreamController = null;
     }
 }
 
@@ -112,7 +147,7 @@ async function initializeOpenAI() {
     }
 
     return new Promise((resolve, reject) => {
-        const uri = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`;
+        const uri = `wss://api.openai.com/v1/realtime?model=gpt-realtime`;
         const protocols = [
             "realtime",
             `openai-insecure-api-key.${apiKeys.openai}`,
@@ -133,15 +168,22 @@ async function initializeOpenAI() {
                 JSON.stringify({
                     type: "session.update",
                     session: {
-                        modalities: ["text", "audio"],
+                        type: "realtime",
+                        output_modalities: ["audio"],
                         instructions:
-                            "You are a helpful assistant named Merli.",
-                        input_audio_transcription: { model: "whisper-1" },
-                        turn_detection: {
-                            type: "server_vad",
-                            threshold: 0.5,
-                            prefix_padding_ms: 300,
-                            silence_duration_ms: 500,
+                            "You are a helpful assistant named Merli. Please speak in english",
+                        audio: {
+                            input: {
+                                format: {
+                                    type: "audio/pcm",
+                                    rate: 24000,
+                                },
+                                transcription: {
+                                    language: "en",
+                                    model: "gpt-4o-transcribe",
+                                },
+                                turn_detection: null,
+                            },
                         },
                     },
                 }),
@@ -181,26 +223,18 @@ function handleOpenAIEvent(event) {
             }
             break;
 
-        case "response.audio_transcript.delta":
+        case "response.output_audio_transcript.delta":
             currentResponse += event.delta;
             if (responseDiv) {
                 responseDiv.textContent = currentResponse;
             }
             break;
 
-        case "response.audio_transcript.done":
+        case "response.output_audio_transcript.done":
             console.log("✅ Response complete:", currentResponse);
-            if (
-                currentResponse.length > 0 &&
-                elevenLabsWs?.readyState === WebSocket.OPEN
-            ) {
-                elevenLabsWs.send(
-                    JSON.stringify({
-                        text: currentResponse + " ",
-                        try_trigger_generation: true,
-                    }),
-                );
-                elevenLabsWs.send(JSON.stringify({ text: "" }));
+            if (currentResponse.length > 0) {
+                // Use HTTP streaming instead of WebSocket
+                streamElevenLabsAudio(currentResponse);
             }
             currentResponse = "";
             break;
@@ -210,7 +244,7 @@ function handleOpenAIEvent(event) {
             break;
 
         default:
-            // Ignore other events
+            console.log("OpenAI event:", event);
             break;
     }
 }
@@ -218,14 +252,12 @@ function handleOpenAIEvent(event) {
 // ===================================
 // Audio Playback
 // ===================================
-async function playAllAudio() {
-    if (audioChunks.length === 0) {
-        console.log("No audio to play");
-        return;
-    }
 
-    console.log(`🔊 Playing ${audioChunks.length} accumulated chunks...`);
-
+/**
+ * Play audio from an ArrayBuffer
+ * @param {ArrayBuffer} arrayBuffer - The audio data to play
+ */
+async function playAudioBuffer(arrayBuffer) {
     if (!playbackAudioContext) {
         playbackAudioContext = new (
             window.AudioContext || window.webkitAudioContext
@@ -236,55 +268,46 @@ async function playAllAudio() {
         await playbackAudioContext.resume();
     }
 
-    // Combine all chunks into one ArrayBuffer
-    let totalLength = 0;
-    const decodedChunks = [];
-
-    for (const base64Audio of audioChunks) {
-        const binaryString = atob(base64Audio);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        decodedChunks.push(bytes);
-        totalLength += bytes.length;
-    }
-
-    const combined = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of decodedChunks) {
-        combined.set(chunk, offset);
-        offset += chunk.length;
-    }
-
     try {
         const audioBuffer = await playbackAudioContext.decodeAudioData(
-            combined.buffer.slice(0),
+            arrayBuffer.slice(0),
         );
-        console.log(`🎵 Total audio duration: ${audioBuffer.duration}s`);
+
+        console.log(`🎵 Playing audio: ${audioBuffer.duration.toFixed(2)}s`);
 
         currentSource = playbackAudioContext.createBufferSource();
         currentSource.buffer = audioBuffer;
         currentSource.connect(playbackAudioContext.destination);
-        currentSource.start(0);
 
         currentSource.onended = () => {
-            console.log("✅ All audio finished playing");
+            console.log("✅ Audio playback complete");
             currentSource = null;
         };
-    } catch (error) {
-        console.error("Error decoding combined audio:", error);
-    }
 
-    audioChunks = [];
+        currentSource.start(0);
+    } catch (error) {
+        console.error("Error playing audio:", error);
+    }
 }
 
 function stopAudioPlayback() {
+    // Cancel any ongoing stream
+    cancelElevenLabsStream();
+
     if (currentSource) {
-        currentSource.stop();
+        try {
+            currentSource.stop();
+        } catch (e) {
+            // Source may have already stopped
+        }
         currentSource = null;
     }
-    audioChunks = [];
+
+    // Close audio context
+    if (playbackAudioContext) {
+        playbackAudioContext.close();
+        playbackAudioContext = null;
+    }
 }
 
 // ===================================
@@ -362,6 +385,7 @@ async function stopMicrophone() {
     // Commit audio buffer to trigger response
     if (openAIWs?.readyState === WebSocket.OPEN) {
         openAIWs.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+        openAIWs.send(JSON.stringify({ type: "response.create" }));
     }
 
     updateUI("processing");
@@ -440,7 +464,7 @@ async function cleanup() {
 
     await interrupt();
     closeOpenAI();
-    closeElevenLabs();
+    cancelElevenLabsStream();
 
     if (playbackAudioContext) {
         await playbackAudioContext.close();
@@ -506,11 +530,11 @@ async function initialize() {
 
     updateUI("initializing");
 
-    try {
-        await initializeElevenLabs();
-        console.log("✅ ElevenLabs initialized");
-    } catch (error) {
-        console.warn("⚠️ Continuing without TTS:", error);
+    // ElevenLabs uses HTTP streaming now - no initialization needed
+    if (apiKeys.elevenlabs) {
+        console.log("✅ ElevenLabs API key found (using HTTP streaming)");
+    } else {
+        console.warn("⚠️ No ElevenLabs API key - TTS disabled");
     }
 
     try {
@@ -539,6 +563,24 @@ if (window.api.onToggleMic) {
 }
 if (window.api.onInterrupt) {
     window.api.onInterrupt(() => interrupt());
+}
+
+// Push-to-talk listeners
+if (window.api.onStartMic) {
+    window.api.onStartMic(() => {
+        if (!isRecording) {
+            console.log("🎤 Push-to-talk: Starting mic");
+            startMicrophone();
+        }
+    });
+}
+if (window.api.onStopMic) {
+    window.api.onStopMic(() => {
+        if (isRecording) {
+            console.log("🎤 Push-to-talk: Stopping mic");
+            stopMicrophone();
+        }
+    });
 }
 
 // ===================================

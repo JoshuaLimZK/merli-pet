@@ -16,6 +16,10 @@ contextBridge.exposeInMainWorld("api", {
     onToggleMic: (callback) => ipcRenderer.on("toggle-mic", () => callback()),
     onInterrupt: (callback) => ipcRenderer.on("interrupt", () => callback()),
 
+    // Push-to-talk listeners
+    onStartMic: (callback) => ipcRenderer.on("start-mic", () => callback()),
+    onStopMic: (callback) => ipcRenderer.on("stop-mic", () => callback()),
+
     // Send events back to main
     sendToMain: (channel, data) => ipcRenderer.send(channel, data),
 });

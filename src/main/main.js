@@ -1,6 +1,7 @@
 // @ts-check
 import { app, ipcMain, BrowserWindow, screen } from "electron";
 import dotenv from "dotenv";
+import { uIOhook, UiohookKey } from "uiohook-napi";
 
 // Load environment variables
 dotenv.config();
@@ -37,6 +38,36 @@ import path from "path";
 // Reference Variables
 // e.g Windows, API Clients, etc.
 // ======================
+
+/** @type {BrowserWindow | null} */
+let micWindow = null;
+
+// ======================
+// Push-to-Talk Setup
+// ======================
+let isPushToTalkActive = false;
+const PUSH_TO_TALK_KEY = UiohookKey.AltRight; // Right Alt key
+
+function setupPushToTalk() {
+    uIOhook.on("keydown", (e) => {
+        if (e.keycode === PUSH_TO_TALK_KEY && !isPushToTalkActive) {
+            isPushToTalkActive = true;
+            console.log("🎤 Push-to-talk: START");
+            micWindow?.webContents.send("start-mic");
+        }
+    });
+
+    uIOhook.on("keyup", (e) => {
+        if (e.keycode === PUSH_TO_TALK_KEY && isPushToTalkActive) {
+            isPushToTalkActive = false;
+            console.log("🎤 Push-to-talk: STOP");
+            micWindow?.webContents.send("stop-mic");
+        }
+    });
+
+    uIOhook.start();
+    console.log("✅ Push-to-talk initialized (Right Alt key)");
+}
 
 // ======================
 // IPC Handlers
@@ -273,15 +304,21 @@ onStateChange((newState) => {
 // ======================
 app.whenReady().then(() => {
     createPetWindow(!app.isPackaged);
-    let imageDragWindow = createImageDragWindow();
-    slideInFromRight(imageDragWindow, 400, 400, 10);
+    micWindow = createMicWindow(!app.isPackaged);
+    // let imageDragWindow = createImageDragWindow();
+    // slideInFromRight(imageDragWindow, 400, 400, 10);
     startPetUpdateLoop();
+    setupPushToTalk();
     // create bus window
-    const busWindow = new BrowserWindow({
-        width: 400,
-        height: 300,
-    });
-    busWindow.loadFile(path.join(__dirname, "../../renderer/bus/index.html"));
+    // const busWindow = new BrowserWindow({
+    //     width: 400,
+    //     height: 300,
+    // });
+    //busWindow.loadFile(path.join(__dirname, "../../renderer/bus/index.html"));
+});
+
+app.on("will-quit", () => {
+    uIOhook.stop();
 });
 
 app.on("window-all-closed", () => {
