@@ -123,6 +123,8 @@ ipcMain.on("admin-set-state", (_event, state) => {
             transitionToState("imageDragIn", false, 10000);
             dragInRandomImage(petWindow, createImageDragWindow(), null);
         }
+    } else if (state === "getBusTimings") {
+        transitionToState("getBusTimings", false, 2000);
     } else {
         transitionToState(state, false, 10000);
     }
@@ -305,6 +307,15 @@ function startPetUpdateLoop() {
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
             }
 
+            if (petBehavior.state === "getBusTimings") {
+                const busWindow = new BrowserWindow({
+                    width: 200,
+                    height: 150,
+                });
+                busWindow.loadFile(
+                    path.join(__dirname, "../renderer/bus/index.html"),
+                );
+            }
             if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
                 (async () => {
                     try {
