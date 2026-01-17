@@ -99,19 +99,9 @@ const apiKeys = _window.api.getAPIKeys();
 // UI Elements
 // ===================================
 /** @type {HTMLButtonElement | null} */
-const startBtn = /** @type {HTMLButtonElement | null} */ (
-    document.getElementById("startBtn")
+const micBtn = /** @type {HTMLButtonElement | null} */ (
+    document.getElementById("micBtn")
 );
-/** @type {HTMLButtonElement | null} */
-const stopBtn = /** @type {HTMLButtonElement | null} */ (
-    document.getElementById("stopBtn")
-);
-/** @type {HTMLElement | null} */
-const statusDiv = document.getElementById("status");
-/** @type {HTMLElement | null} */
-const transcriptionDiv = document.getElementById("transcription");
-/** @type {HTMLElement | null} */
-const responseDiv = document.getElementById("response");
 
 // ===================================
 // ElevenLabs HTTP Streaming
@@ -618,45 +608,29 @@ async function cleanup() {
  * @returns {void}
  */
 function updateUI(state, errorMsg = "") {
+    if (!micBtn) return;
+
     switch (state) {
         case "initializing":
-            if (statusDiv) statusDiv.textContent = "Initializing...";
-            if (startBtn) startBtn.disabled = true;
-            if (stopBtn) stopBtn.disabled = true;
+            micBtn.disabled = true;
+            micBtn.classList.remove("recording");
             break;
         case "ready":
-            if (statusDiv) {
-                statusDiv.textContent = "Ready! Click 'Start' to begin";
-                statusDiv.classList.remove("listening");
-            }
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            micBtn.disabled = false;
+            micBtn.classList.remove("recording");
             break;
         case "recording":
-            if (statusDiv) {
-                statusDiv.textContent = "🎤 Listening...";
-                statusDiv.classList.add("listening");
-            }
-            if (startBtn) startBtn.disabled = true;
-            if (stopBtn) stopBtn.disabled = false;
-            if (transcriptionDiv) transcriptionDiv.textContent = "";
-            if (responseDiv) responseDiv.textContent = "";
+            micBtn.disabled = false;
+            micBtn.classList.add("recording");
             break;
         case "processing":
-            if (statusDiv) {
-                statusDiv.textContent = "Processing...";
-                statusDiv.classList.remove("listening");
-            }
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            micBtn.disabled = false;
+            micBtn.classList.remove("recording");
             break;
         case "error":
-            if (statusDiv) {
-                statusDiv.textContent = `❌ Error: ${errorMsg}`;
-                statusDiv.classList.remove("listening");
-            }
-            if (startBtn) startBtn.disabled = false;
-            if (stopBtn) stopBtn.disabled = true;
+            console.error("Mic error:", errorMsg);
+            micBtn.disabled = false;
+            micBtn.classList.remove("recording");
             break;
     }
 }
@@ -698,8 +672,11 @@ async function initialize() {
 // ===================================
 // Event Listeners
 // ===================================
-if (startBtn) startBtn.addEventListener("click", startMicrophone);
-if (stopBtn) stopBtn.addEventListener("click", stopMicrophone);
+if (micBtn) {
+    micBtn.addEventListener("click", () => {
+        toggleMicrophone();
+    });
+}
 
 // Listen for IPC messages from main process
 if (_window.api.onSendMessage) {

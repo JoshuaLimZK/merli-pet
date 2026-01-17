@@ -82,7 +82,7 @@ export async function loadPetModel(scene, modelSize) {
     const model = gltf.scene;
 
     // Debug: Log model metadata
-    debugModelMetadata(gltf);
+    // debugModelMetadata(gltf);
 
     // Center and scale the model
     centerAndScaleModel(model, modelSize);

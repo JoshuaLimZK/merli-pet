@@ -33,6 +33,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import { get } from "http";
 
+// @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Whether wallpaper operations are available on this system
@@ -202,6 +203,7 @@ function onWander(petWindow) {
         return;
     }
 }
+import { exec } from "child_process";
 
 /**
  * Handles the idle behavior - pet stays in place
@@ -210,6 +212,7 @@ function onWander(petWindow) {
  */
 function onIdle(petWindow) {
     const { x: petWindowCurrentX, y: petWindowCurrentY } = getPetPosition();
+
     petMoveTo(petWindow, petWindowCurrentX, petWindowCurrentY, 0);
 }
 
@@ -227,15 +230,25 @@ function startPetUpdateLoop() {
             const petWindow = getPetWindow();
             if (!petWindow) return;
 
-            const didTransition = checkStateTransition();
+            let didTransition = checkStateTransition();
 
-            if (didTransition && Math.random() < 0.2) {
+            if (didTransition && Math.random() < 0.075) {
                 transitionToState("imageDragIn", false, 10000);
                 console.log("Dragging in random image due to state transition");
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
+            } else if (didTransition && petBehavior.state === "idle") {
+                if (process.platform === "darwin") {
+                    exec(
+                        "osascript -e 'tell application \"Spotify\" to get player state'",
+                        (err, stdout) => {
+                            console.log("Current state:", stdout.trim()); // returns "playing" or "paused"
+                        },
+                    );
+                }
             }
 
-            if (didTransition && Math.random() < 0.9) {
+            if (didTransition && Math.random() < 0.975) {
+
                 (async () => {
                     try {
                         const currentWallpaper = await getWallpaper();
@@ -246,16 +259,19 @@ function startPetUpdateLoop() {
                         setTimeout(async () => {
                             try {
                                 await setWallpaper(currentWallpaper);
-                                console.log("Wallpaper reverted to:", currentWallpaper);
+                                console.log("Wallpaper reverted to original.");
                             } catch (err) {
                                 console.error("Failed to revert wallpaper:", err);
                             }
-                        }, 700);
+                        }, 1000);
                     } catch (err) {
                         console.error("Wallpaper change failed:", err);
+                        // mark unavailable to avoid repeated failures
+                        wallpaperAvailable = false;
                     }
                 })();
             }
+
             switch (petBehavior.state) {
                 case "follow":
                     onFollow(petWindow);
@@ -356,14 +372,16 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
                 path.extname(file).toLowerCase(),
             ),
         );
-    const randomMemFile =
-        memFiles[Math.floor(Math.random() * memFiles.length)];
+    const randomMemFile = memFiles[Math.floor(Math.random() * memFiles.length)];
     const randomMemPath = path.join(memsDir, randomMemFile);
     console.log("Selected random image:", randomMemPath);
 
     console.log("Dragging in image:", randomMemPath);
     imageDragWindow.on("ready-to-show", () => {
-        imageDragWindow.webContents.send("image-url", `file://${randomMemPath}`);
+        imageDragWindow.webContents.send(
+            "image-url",
+            `file://${randomMemPath}`,
+        );
     });
 
     const targetX = screen.getPrimaryDisplay().workAreaSize.width;
@@ -456,7 +474,7 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
-    micWindow = createMicWindow(!app.isPackaged);
+    micWindow = createMicWindow(false);
     setupPushToTalk();
     // determine at startup whether wallpaper operations work on this host
     const petWindow = createPetWindow(!app.isPackaged);
