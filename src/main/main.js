@@ -256,6 +256,27 @@ function onIdle(petWindow) {
     petMoveTo(petWindow, petWindowCurrentX, petWindowCurrentY, 0);
 }
 
+function musicCheckMac() {
+    const script = `
+    tell application "Spotify"
+        if player state is playing then
+            return "playing"
+        else
+            return "paused"
+        end if
+    end tell
+  `;
+    let state = "paused";
+    exec(`osascript -e '${script}'`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error checking music state: ${error.message}`);
+            return;
+        }
+        state = stdout.trim();
+    });
+    return state === "playing" ? true : false;
+}
+
 // ======================
 // Update Loop
 // ======================
@@ -265,6 +286,8 @@ function onIdle(petWindow) {
  * @returns {void}
  */
 function startPetUpdateLoop() {
+    let newIdleState = true;
+    let idleMusicInterval = null;
     const mainLoop = setInterval(
         () => {
             const petWindow = getPetWindow();
@@ -276,33 +299,6 @@ function startPetUpdateLoop() {
                 transitionToState("imageDragIn", false, 10000);
                 console.log("Dragging in random image due to state transition");
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
-            } else if (didTransition && petBehavior.state === "idle") {
-                if (process.platform === "darwin") {
-                    setInterval(() => {
-                        const script = `
-    tell application "Spotify"
-        if player state is playing then
-            return "playing"
-        else
-            return "paused"
-        end if
-    end tell
-  `;
-                        exec(
-                            `osascript -e '${script}'`,
-                            (error, stdout, stderr) => {
-                                if (error) {
-                                    console.error(
-                                        `Error checking music state: ${error.message}`,
-                                    );
-                                    return;
-                                }
-                                const state = stdout.trim();
-                                console.log(`Music is ${state}`);
-                            },
-                        );
-                    }, 2000);
-                }
             }
 
             if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
@@ -335,6 +331,15 @@ function startPetUpdateLoop() {
                 })();
             }
 
+            if (petBehavior.state !== "idle") {
+                newIdleState = true;
+                petWindow.webContents.send("stop-idle-music");
+                if (idleMusicInterval) {
+                    clearInterval(idleMusicInterval);
+                    idleMusicInterval = null;
+                }
+            }
+
             switch (petBehavior.state) {
                 case "follow":
                     onFollow(petWindow);
@@ -344,6 +349,23 @@ function startPetUpdateLoop() {
                     break;
 
                 case "idle":
+                    if (newIdleState) {
+                        if (process.platform === "darwin") {
+                            idleMusicInterval = setInterval(() => {
+                                let musicPlaying = musicCheckMac();
+                                if (musicPlaying) {
+                                    petWindow.webContents.send(
+                                        "play-idle-music",
+                                    );
+                                } else {
+                                    petWindow.webContents.send(
+                                        "stop-idle-music",
+                                    );
+                                }
+                            }, 2000);
+                        }
+                    }
+                    newIdleState = false;
                     onIdle(petWindow);
                     break;
             }
