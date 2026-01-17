@@ -11,7 +11,11 @@ const {
     getPetPosition,
     setPetPosition,
 } = require("./windows/pet/window");
-const { petBehavior, onStateChange } = require("./state/petBehavior");
+const {
+    petBehavior,
+    onStateChange,
+    checkStateTransition,
+} = require("./state/petBehavior");
 
 // ======================
 // OpenAI Module
@@ -41,6 +45,8 @@ function startPetUpdateLoop() {
         () => {
             const petWindow = getPetWindow();
             if (!petWindow) return;
+
+            checkStateTransition();
 
             const mousePosition = screen.getCursorScreenPoint();
             const mousePositionX = mousePosition.x;
