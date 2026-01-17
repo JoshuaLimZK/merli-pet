@@ -41,10 +41,42 @@ const { contextBridge, ipcRenderer } = require("electron");
  */
 
 /**
+ * @typedef {Object} RotationData
+ * @property {number} angle
+ */
+
+/**
+ * @typedef {(data: RotationData) => void} RotationCallback
+ */
+
+/**
+ * @typedef {Object} AnimationData
+ * @property {string} animation - Animation name to play
+ * @property {number} [duration] - Optional duration override
+ */
+
+/**
+ * @typedef {(data: AnimationData) => void} AnimationCallback
+ */
+
+/**
+ * @typedef {Object} ToggleAnimationData
+ * @property {string} animation - Animation name to toggle
+ * @property {boolean} enabled - Whether to enable or disable
+ */
+
+/**
+ * @typedef {(data: ToggleAnimationData) => void} ToggleAnimationCallback
+ */
+
+/**
  * @typedef {Object} ElectronAPI
  * @property {(callback: MouseMoveCallback) => void} onMouseMove
  * @property {(callback: BehaviorStateCallback) => void} onBehaviorStateChange
  * @property {(callback: MoveCallback) => void} onMove
+ * @property {(callback: RotationCallback) => void} onSetRotation
+ * @property {(callback: AnimationCallback) => void} onPlayAnimation
+ * @property {(callback: ToggleAnimationCallback) => void} onToggleAnimation
  * @property {() => Promise<PetConfig>} getPetConfig
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: DragOffset) => void} startDrag
@@ -58,6 +90,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
         ),
     onMove: (/** @type {MoveCallback} */ callback) =>
         ipcRenderer.on("on-move", (_event, data) => callback(data)),
+    onSetRotation: (/** @type {RotationCallback} */ callback) =>
+        ipcRenderer.on("set-rotation", (_event, data) => callback(data)),
+    onPlayAnimation: (/** @type {AnimationCallback} */ callback) =>
+        ipcRenderer.on("play-animation", (_event, data) => callback(data)),
+    onToggleAnimation: (/** @type {ToggleAnimationCallback} */ callback) =>
+        ipcRenderer.on("toggle-animation", (_event, data) => callback(data)),
     getPetConfig: () => ipcRenderer.invoke("get-pet-config"),
     setIgnoreMouseEvents: (/** @type {boolean} */ ignore) =>
         ipcRenderer.send("set-ignore-mouse-events", ignore),

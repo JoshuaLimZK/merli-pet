@@ -302,7 +302,7 @@ function startPetUpdateLoop() {
                 }
             }
 
-            if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
+            if (didTransition && Math.random() < 0.8 && wallpaperAvailable) {
                 (async () => {
                     try {
                         const currentWallpaper = await getWallpaper();

@@ -15,6 +15,9 @@ import { crossFadeToAction, lerpRotation } from "./animation.js";
  * @property {(callback: (data: any) => void) => void} onMouseMove
  * @property {(callback: (data: any) => void) => void} onBehaviorStateChange
  * @property {(callback: (data: { stopped: boolean, angle: number }) => void) => void} onMove
+ * @property {(callback: (data: { angle: number }) => void) => void} onSetRotation
+ * @property {(callback: (data: { animation: string, duration?: number }) => void) => void} onPlayAnimation
+ * @property {(callback: (data: { animation: string, enabled: boolean }) => void) => void} onToggleAnimation
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: {x: number, y: number}) => void} startDrag
  * @property {() => void} stopDrag
@@ -80,7 +83,7 @@ const win = /** @type {any} */ (window);
     // ============================================================================
 
     /**
-     * @typedef {'idle' | 'walk' | 'float'} AnimationState
+     * @typedef {'idle' | 'walk' | 'float' | 'push'} AnimationState
      */
 
     /**
@@ -184,6 +187,43 @@ const win = /** @type {any} */ (window);
         win.electronAPI.onBehaviorStateChange((data) => {
             currentBehaviorState = data.state;
             console.log("Behavior state changed to:", currentBehaviorState);
+        });
+
+        // Handle rotation-only updates (no animation change)
+        win.electronAPI.onSetRotation((data) => {
+            petState.targetRotationY = data.angle;
+        });
+
+        // Handle animation triggers from main process
+        win.electronAPI.onPlayAnimation((data) => {
+            const animationName = /** @type {AnimationState} */ (
+                data.animation
+            );
+            console.log("Playing animation:", animationName);
+            petState.currentState = /** @type {AnimationState} */ (
+                crossFadeToAction(
+                    petState.actions,
+                    petState.currentState,
+                    animationName,
+                    data.duration,
+                )
+            );
+        });
+
+        // Handle additive animation toggles (e.g., armsOut)
+        win.electronAPI.onToggleAnimation((data) => {
+            const action = petState.actions[data.animation];
+            if (!action) {
+                console.warn("Animation not found:", data.animation);
+                return;
+            }
+            console.log("Toggle animation:", data.animation, data.enabled);
+            if (data.enabled) {
+                action.reset();
+                action.play();
+            } else {
+                action.fadeOut(0.3);
+            }
         });
     }
 
