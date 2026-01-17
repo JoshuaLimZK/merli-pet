@@ -139,6 +139,12 @@ ipcMain.on("admin-trigger-quote", () => {
     sendRandomQuote();
 });
 
+// Show quote from mic renderer (AI response)
+ipcMain.on("show-quote", (_event, { text, duration }) => {
+    console.log("Showing quote from mic:", text, "duration:", duration);
+    sendRandomQuote(text, duration);
+});
+
 /** @type {string[]} */
 const quotes = [
     "The only way to do great work is to love what you do. - Steve Jobs",
@@ -156,9 +162,10 @@ const quotes = [
 /**
  * Sends a random quote to the renderer process via a quote window
  * @param {string | null} [quote=null] - Optional specific quote to display, otherwise picks randomly
+ * @param {number} [duration=5000] - Duration to display the quote in milliseconds
  * @returns {void}
  */
-function sendRandomQuote(quote = null) {
+function sendRandomQuote(quote = null, duration = 5000) {
     let petWindow = getPetWindow();
     if (!petWindow) return;
     let quoteW = quoteWindow.createQuoteWindow(petWindow);
@@ -196,7 +203,7 @@ function sendRandomQuote(quote = null) {
         clearInterval(interval);
         if (quoteW.isDestroyed()) return;
         quoteW.close();
-    }, 5000);
+    }, duration);
 }
 
 /**

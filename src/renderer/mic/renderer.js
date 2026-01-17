@@ -19,6 +19,7 @@
  * @property {((callback: () => void) => void)} [onInterrupt]
  * @property {((callback: () => void) => void)} [onStartMic]
  * @property {((callback: () => void) => void)} [onStopMic]
+ * @property {((channel: string, data: any) => void)} [sendToMain]
  */
 
 /**
@@ -320,6 +321,18 @@ function handleOpenAIEvent(event) {
             if (currentResponse.length > 0) {
                 // Use HTTP streaming instead of WebSocket
                 streamElevenLabsAudio(currentResponse);
+                // Show the response text in a quote bubble
+                // Estimate duration: ~80ms per character for TTS speech + 1s buffer
+                const estimatedDuration = Math.max(
+                    3000,
+                    currentResponse.length * 80 + 1000,
+                );
+                if (_window.api.sendToMain) {
+                    _window.api.sendToMain("show-quote", {
+                        text: currentResponse,
+                        duration: estimatedDuration,
+                    });
+                }
             }
             currentResponse = "";
             break;
