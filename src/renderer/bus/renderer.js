@@ -26,8 +26,19 @@ const loadBusTimeLeft = async () => {
     /** @type {HTMLElement | null} */
     const element = document.getElementById("bus-time-left");
     if (element) {
-        element.innerText = JSON.stringify(busTimeLeft);
+        element.innerText = busTimeLeft.Services[0].NextBus.EstimatedArrival
+            ? Math.ceil(
+                  (new Date(busTimeLeft.Services[0].NextBus.EstimatedArrival) -
+                      new Date()) /
+                      60000,
+              ) + " Mins"
+            : "No Arrival Info";
+    }
+    const busNoElement = document.getElementById("bus-no");
+    if (busNoElement) {
+        busNoElement.innerText = `Bus ${busTimeLeft.Services[0].ServiceNo} arriving in`;
     }
 };
 
 loadBusTimeLeft();
+setInterval(loadBusTimeLeft, 30_000);

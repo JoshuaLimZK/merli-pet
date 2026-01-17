@@ -123,6 +123,8 @@ ipcMain.on("admin-set-state", (_event, state) => {
             transitionToState("imageDragIn", false, 10000);
             dragInRandomImage(petWindow, createImageDragWindow(), null);
         }
+    } else if (state === "getBusTimings") {
+        transitionToState("getBusTimings", false, 2000);
     } else {
         transitionToState(state, false, 10000);
     }
@@ -266,6 +268,31 @@ function onIdle(petWindow) {
     petMoveTo(petWindow, petWindowCurrentX, petWindowCurrentY, 0);
 }
 
+function musicCheckMac() {
+    const script = `
+    tell application "Spotify"
+        if player state is playing then
+            return "playing"
+        else
+            return "paused"
+        end if
+    end tell
+  `;
+    return new Promise((resolve) => {
+        exec(`osascript -e '${script}'`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error checking music state: ${error.message}`);
+                resolve(false);
+                return;
+            }
+            if (stderr && stderr.trim()) {
+                console.warn(`Music state warning: ${stderr.trim()}`);
+            }
+            resolve(stdout.trim() === "playing");
+        });
+    });
+}
+
 // ======================
 // Update Loop
 // ======================
@@ -275,6 +302,8 @@ function onIdle(petWindow) {
  * @returns {void}
  */
 function startPetUpdateLoop() {
+    let newIdleState = true;
+    let idleMusicInterval = null;
     const mainLoop = setInterval(
         () => {
             const petWindow = getPetWindow();
@@ -295,17 +324,17 @@ function startPetUpdateLoop() {
                 transitionToState("imageDragIn", false, 10000);
                 console.log("Dragging in random image due to state transition");
                 dragInRandomImage(petWindow, createImageDragWindow(), mainLoop);
-            } else if (didTransition && petBehavior.state === "idle") {
-                if (process.platform === "darwin") {
-                    exec(
-                        "osascript -e 'tell application \"Spotify\" to get player state'",
-                        (err, stdout) => {
-                            console.log("Current state:", stdout.trim()); // returns "playing" or "paused"
-                        },
-                    );
-                }
             }
 
+            if (petBehavior.state === "getBusTimings") {
+                const busWindow = new BrowserWindow({
+                    width: 200,
+                    height: 150,
+                });
+                busWindow.loadFile(
+                    path.join(__dirname, "../renderer/bus/index.html"),
+                );
+            }
             if (didTransition && Math.random() < 0.05 && wallpaperAvailable) {
                 (async () => {
                     try {
@@ -336,6 +365,15 @@ function startPetUpdateLoop() {
                 })();
             }
 
+            if (petBehavior.state !== "idle") {
+                newIdleState = true;
+                petWindow.webContents.send("stop-idle-music");
+                if (idleMusicInterval) {
+                    clearInterval(idleMusicInterval);
+                    idleMusicInterval = null;
+                }
+            }
+
             switch (petBehavior.state) {
                 case "follow":
                     onFollow(petWindow);
@@ -345,6 +383,25 @@ function startPetUpdateLoop() {
                     break;
 
                 case "idle":
+                    if (newIdleState) {
+                        if (process.platform === "darwin") {
+                            idleMusicInterval = setInterval(() => {
+                                musicCheckMac().then((musicPlaying) => {
+                                    console.log("Music playing:", musicPlaying);
+                                    if (musicPlaying) {
+                                        petWindow.webContents.send(
+                                            "play-idle-music",
+                                        );
+                                    } else {
+                                        petWindow.webContents.send(
+                                            "stop-idle-music",
+                                        );
+                                    }
+                                });
+                            }, 1000);
+                        }
+                    }
+                    newIdleState = false;
                     onIdle(petWindow);
                     break;
             }
@@ -448,23 +505,34 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
         );
     });
 
-    const targetX = screen.getPrimaryDisplay().workAreaSize.width;
+    const targetX =
+        screen.getPrimaryDisplay().workAreaSize.width -
+        Math.floor(
+            Math.random() * (screen.getPrimaryDisplay().workAreaSize.width / 2),
+        );
     const targetY = Math.floor(
         Math.random() * screen.getPrimaryDisplay().workAreaSize.height,
     );
 
     const dragInImageLoop = setInterval(() => {
-        let moved = petMoveTo(petWindow, targetX, targetY, 3);
+        let moved = petMoveTo(
+            petWindow,
+            screen.getPrimaryDisplay().workAreaSize.width,
+            targetY,
+            3,
+        );
         if (!moved) {
-            slideInFromRight(imageDragWindow, 400, 400, 3, targetY - 200);
+            slideInFromRight(
+                imageDragWindow,
+                400,
+                400,
+                3,
+                targetY - 200,
+                targetX,
+            );
             const pullOutLoop = setInterval(
                 () => {
-                    let movedBack = petMoveTo(
-                        petWindow,
-                        screen.getPrimaryDisplay().workAreaSize.width - 400,
-                        targetY,
-                        3,
-                    );
+                    let movedBack = petMoveTo(petWindow, targetX, targetY, 3);
                     if (!movedBack) {
                         clearInterval(pullOutLoop);
                         transitionToState("idle", false, 5000);
@@ -500,16 +568,25 @@ function slideInFromRight(
     y = Math.floor(
         screen.getPrimaryDisplay().workAreaSize.height / 2 - height / 2,
     ),
+    x = 0,
 ) {
-    let x = screen.getPrimaryDisplay().workAreaSize.width;
-    window.setBounds({ x, y, width: 0, height });
-    window.setBounds({ x, y, width, height });
+    window.setBounds({
+        x: screen.getPrimaryDisplay().workAreaSize.width,
+        y,
+        width: 0,
+        height,
+    });
+    window.setBounds({
+        x: screen.getPrimaryDisplay().workAreaSize.width,
+        y,
+        width,
+        height,
+    });
     window.show();
     const interval = setInterval(
         () => {
             const bounds = window.getBounds();
-            const targetX =
-                screen.getPrimaryDisplay().workAreaSize.width - width;
+            const targetX = x;
             if (bounds.x > targetX) {
                 const nextX = Math.max(bounds.x - speed, targetX);
                 window.setBounds({ x: nextX, y: bounds.y, width, height });

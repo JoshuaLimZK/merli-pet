@@ -11,7 +11,9 @@
                 box-sizing: border-box;
             }
             body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
                 background: #1a1a2e;
                 color: #eee;
                 padding: 20px;
@@ -75,6 +77,10 @@
                 background: #9f7aea;
                 color: white;
             }
+            .btn-bus {
+                background: #ed64a6;
+                color: white;
+            }
             .status {
                 margin-top: 16px;
                 padding: 10px;
@@ -93,13 +99,17 @@
     </head>
     <body>
         <h1>🐦 Merli Admin</h1>
-        
+
         <div class="section">
             <h2>Behavior States</h2>
             <div class="button-grid">
                 <button class="btn btn-idle" data-state="idle">😴 Idle</button>
-                <button class="btn btn-wander" data-state="wander">🚶 Wander</button>
-                <button class="btn btn-follow" data-state="follow">👆 Follow</button>
+                <button class="btn btn-wander" data-state="wander">
+                    🚶 Wander
+                </button>
+                <button class="btn btn-follow" data-state="follow">
+                    👆 Follow
+                </button>
             </div>
             <div class="status">
                 <span class="status-label">Current State: </span>
@@ -110,8 +120,15 @@
         <div class="section">
             <h2>Actions</h2>
             <div class="button-grid">
-                <button class="btn btn-quote" id="quoteBtn">💬 Random Quote</button>
-                <button class="btn btn-dragin" data-state="imageDragIn">🖼️ Image Drag In</button>
+                <button class="btn btn-quote" id="quoteBtn">
+                    💬 Random Quote
+                </button>
+                <button class="btn btn-dragin" data-state="imageDragIn">
+                    🖼️ Image Drag In
+                </button>
+                <button class="btn btn-bus" data-state="getBusTimings">
+                    🚌 Get Bus Timings
+                </button>
             </div>
         </div>
 
