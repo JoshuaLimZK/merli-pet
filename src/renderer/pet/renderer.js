@@ -153,85 +153,32 @@ const win = /** @type {any} */ (window);
     /** @type {BehaviorState} */
     let currentBehaviorState = "follow";
 
-    if (win.electronAPI) {
-        // Handle mouse movement data
-        win.electronAPI.onMouseMove((data) => {
-            isMouseWithinStopDistance = data.isWithinStopDistance;
+        win.electronAPI.onMove((data) => {
+            const stopped = data.stopped;
+            const angle = data.angle;
 
-            // Animation logic depends on behavior state
-            if (currentBehaviorState === "idle") {
-                // In idle state, always play idle animation
-                if (petState.currentState !== "idle" && petState.actions.idle) {
-                    petState.currentState = /** @type {AnimationState} */ (
-                        crossFadeToAction(
-                            petState.actions,
-                            petState.currentState,
-                            "idle",
-                        )
-                    );
-                }
-                // Face forward when idle
-                petState.targetRotationY = 0;
-            } else if (currentBehaviorState === "dragging") {
-                // When being dragged, play idle animation and face forward
-                if (
-                    petState.currentState !== "float" &&
-                    petState.actions.float
-                ) {
-                    petState.currentState = /** @type {AnimationState} */ (
-                        crossFadeToAction(
-                            petState.actions,
-                            petState.currentState,
-                            "float",
-                        )
-                    );
-                }
-                // Face forward (toward the user) when being picked up
+            if (stopped) {
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "idle",
+                    )
+                );
                 petState.targetRotationY = 0;
             } else {
-                // In follow/wander states, switch based on movement
-                const isMoving =
-                    currentBehaviorState === "wander" ||
-                    (currentBehaviorState === "follow" &&
-                        !data.isWithinStopDistance) ||
-                    currentBehaviorState === "imageDragIn";
-
-                if (isMoving) {
-                    if (
-                        petState.currentState !== "walk" &&
-                        petState.actions.walk
-                    ) {
-                        petState.currentState = /** @type {AnimationState} */ (
-                            crossFadeToAction(
-                                petState.actions,
-                                petState.currentState,
-                                "walk",
-                            )
-                        );
-                    }
-                    // Face direction of movement
-                    petState.targetRotationY =
-                        data.angleToTarget || data.angleMouseToWindow;
-                } else {
-                    if (
-                        petState.currentState !== "idle" &&
-                        petState.actions.idle
-                    ) {
-                        petState.currentState = /** @type {AnimationState} */ (
-                            crossFadeToAction(
-                                petState.actions,
-                                petState.currentState,
-                                "idle",
-                            )
-                        );
-                    }
-                    // Face forward when stopped
-                    petState.targetRotationY = 0;
-                }
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "walk",
+                    )
+                );
+                petState.targetRotationY = angle;
             }
         });
 
-        // Handle behavior state changes from main process
+        // Handle behavior state changes from main process.
         win.electronAPI.onBehaviorStateChange((data) => {
             currentBehaviorState = data.state;
             console.log("Behavior state changed to:", currentBehaviorState);

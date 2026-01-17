@@ -44,11 +44,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
         ipcRenderer.on("mouse-move", (_event, data) => callback(data)),
     onBehaviorStateChange: (/** @type {BehaviorStateCallback} */ callback) =>
         ipcRenderer.on("behavior-state-change", (_event, data) =>
-            callback(data)
+            callback(data),
         ),
+    onMove: (/** @type {MoveCallback} */ callback) =>
+        ipcRenderer.on("on-move", (_event, data) => callback(data)),
     getPetConfig: () => ipcRenderer.invoke("get-pet-config"),
     setIgnoreMouseEvents: (/** @type {boolean} */ ignore) =>
         ipcRenderer.send("set-ignore-mouse-events", ignore),
-    startDrag: (/** @type {DragOffset} */ offset) => ipcRenderer.send("start-drag", offset),
+    startDrag: (/** @type {DragOffset} */ offset) =>
+        ipcRenderer.send("start-drag", offset),
     stopDrag: () => ipcRenderer.send("stop-drag"),
 });
