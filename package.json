@@ -11,8 +11,7 @@
     "type": "module",
     "main": "src/main/main.js",
     "scripts": {
-        "start": "electron .",
-        "test:elevenlabs": "node src/main/elevenlabs/test.js"
+        "start": "electron ."
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",

@@ -393,7 +393,7 @@ onStateChange((newState) => {
 // e.g, WhenReady, Activate, etc.
 // ======================
 app.whenReady().then(() => {
-    micWindow = createMicWindow(!app.isPackaged);
+    micWindow = createMicWindow(false);
     setupPushToTalk();
     const petWindow = createPetWindow(!app.isPackaged);
     petWindow.once("ready-to-show", () => {
