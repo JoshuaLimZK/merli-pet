@@ -37,7 +37,110 @@ const { dragInRandomImage } = require("./systems/imageDragInSystem");
 ipcMain.handle("get-pet-config", () => {
     return PET_WINDOW;
 });
+function onFollow(petWindow) {
 
+    const mousePosition = screen.getCursorScreenPoint();
+    const mousePositionX = mousePosition.x;
+    const mousePositionY = mousePosition.y;
+
+    const { x: petWindowCurrentX, y: petWindowCurrentY } =
+        getPetPosition();
+
+    let deltaXToTarget = mousePositionX - petWindowCurrentX;
+    let deltaYToTarget = mousePositionY - petWindowCurrentY;
+    let distanceMouseToWindow = Math.hypot(deltaXToTarget, deltaYToTarget);
+
+    if (
+        distanceMouseToWindow <
+        PET_WINDOW.STOP_DISTANCE_FROM_MOUSE
+    ) {
+        return ;
+    }
+    petMoveTo(petWindow, mousePositionX, mousePositionY, PET_WINDOW.FOLLOW_SPEED);
+    
+    
+}
+function onWander(petWindow) {
+
+    const {
+        pickWanderTarget,
+    } = require("./state/petBehavior");
+    if (!petBehavior.wanderTarget) {
+        petBehavior.wanderTarget = pickWanderTarget();
+    }
+    const { x: petWindowCurrentX, y: petWindowCurrentY } =
+        getPetPosition();
+    let targetX = petBehavior.wanderTarget.x;
+    let targetY = petBehavior.wanderTarget.y;
+    let deltaXToTarget = targetX - petWindowCurrentX;
+    let deltaYToTarget = targetY - petWindowCurrentY;
+    let distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
+    if (
+        distanceToTarget <
+        PET_BEHAVIOR.WANDER_TARGET_REACHED_DISTANCE
+    ) {
+        petBehavior.wanderTarget = pickWanderTarget();
+        return;
+    }
+    petMoveTo(petWindow, targetX, targetY, PET_WINDOW.FOLLOW_SPEED);
+    
+    
+}
+function updatemodel(petWindow){
+
+    const { x: petWindowCurrentX, y: petWindowCurrentY } =
+        getPetPosition();
+    const mousePosition = screen.getCursorScreenPoint();
+    const mousePositionX = mousePosition.x;
+    const mousePositionY = mousePosition.y;
+    let deltaXMouseToWindow = mousePositionX - petWindowCurrentX;
+    let deltaYMouseToWindow = mousePositionY - petWindowCurrentY;
+    let angleToTarget
+    switch (petBehavior.state) {
+        case "follow":
+            angleToTarget = Math.atan2(
+                deltaXMouseToWindow,
+                deltaYMouseToWindow,
+            );
+        case "wander":
+            const {
+                x: wanderTargetX,
+                y: wanderTargetY,
+            } = petBehavior.wanderTarget || {
+                x: petWindowCurrentX,
+                y: petWindowCurrentY,
+            };
+            let deltaXWanderToWindow =
+                wanderTargetX - petWindowCurrentX;
+            let deltaYWanderToWindow =
+                wanderTargetY - petWindowCurrentY;
+            angleToTarget = Math.atan2(
+                deltaXWanderToWindow,
+                deltaYWanderToWindow,
+            );
+    }
+    let distanceMouseToWindow = Math.hypot(
+        deltaXMouseToWindow,
+        deltaYMouseToWindow,
+    );
+    petWindow.webContents.send("mouse-move", {
+        mousePosition: { x: mousePositionX, y: mousePositionY },
+        deltatMouseToWindow: {
+            x: deltaXMouseToWindow,
+            y: deltaYMouseToWindow,
+        },
+        angleMouseToWindow: Math.atan2(
+            deltaXMouseToWindow,
+            deltaYMouseToWindow,
+        ),
+        angleToTarget,
+        distanceMouseToWindow,
+        isWithinStopDistance:
+            distanceMouseToWindow <=
+            PET_WINDOW.STOP_DISTANCE_FROM_MOUSE,
+        behaviorState: petBehavior.state,
+    });
+}
 // ======================
 // Update Loop
 // ======================
@@ -49,94 +152,20 @@ function startPetUpdateLoop() {
 
             const didTransition = checkStateTransition();
 
-            // start image drag in with small probability
-            // if (didTransition && Math.random() < 1) {
-            //     petBehavior.previousState = petBehavior.state;
-            //     petBehavior.state = "imageDragIn";
-            //     dragInRandomImage(petWindow, createImageDragWindow());
-            //     return;
-            // }
 
-            const mousePosition = screen.getCursorScreenPoint();
-            const mousePositionX = mousePosition.x;
-            const mousePositionY = mousePosition.y;
 
-            const { x: petWindowCurrentX, y: petWindowCurrentY } =
-                getPetPosition();
-            const deltaXMouseToWindow = mousePositionX - petWindowCurrentX;
-            const deltaYMouseToWindow = mousePositionY - petWindowCurrentY;
-            const distanceMouseToWindow = Math.hypot(
-                deltaXMouseToWindow,
-                deltaYMouseToWindow,
-            );
-
-            let targetX, targetY, angleToTarget, distanceToTarget;
-
-            if (petBehavior.state === "wander" && petBehavior.wanderTarget) {
-                targetX = petBehavior.wanderTarget.x;
-                targetY = petBehavior.wanderTarget.y;
-            } else {
-                targetX = mousePositionX;
-                targetY = mousePositionY;
-            }
-
-            let deltaXToTarget = targetX - petWindowCurrentX;
-            let deltaYToTarget = targetY - petWindowCurrentY;
-            distanceToTarget = Math.hypot(deltaXToTarget, deltaYToTarget);
-            angleToTarget = Math.atan2(deltaXToTarget, deltaYToTarget);
-
-            petWindow.webContents.send("mouse-move", {
-                mousePosition: { x: mousePositionX, y: mousePositionY },
-                deltatMouseToWindow: {
-                    x: deltaXMouseToWindow,
-                    y: deltaYMouseToWindow,
-                },
-                angleMouseToWindow: Math.atan2(
-                    deltaXMouseToWindow,
-                    deltaYMouseToWindow,
-                ),
-                angleToTarget,
-                distanceMouseToWindow,
-                isWithinStopDistance:
-                    distanceMouseToWindow <=
-                    PET_WINDOW.STOP_DISTANCE_FROM_MOUSE,
-                behaviorState: petBehavior.state,
-            });
-
-            let shouldMove = false;
-            let speed = 0;
+            updatemodel(petWindow);
 
             switch (petBehavior.state) {
                 case "follow":
-                    if (
-                        distanceMouseToWindow >
-                        PET_WINDOW.STOP_DISTANCE_FROM_MOUSE
-                    ) {
-                        shouldMove = true;
-                        speed = PET_WINDOW.FOLLOW_SPEED;
-                    }
+                    onFollow(petWindow);
                     break;
                 case "wander":
-                    if (
-                        distanceToTarget >
-                        PET_BEHAVIOR.WANDER_TARGET_REACHED_DISTANCE
-                    ) {
-                        shouldMove = true;
-                        speed = PET_BEHAVIOR.WANDER_SPEED;
-                    } else {
-                        const {
-                            pickWanderTarget,
-                        } = require("./state/petBehavior");
-                        petBehavior.wanderTarget = pickWanderTarget();
-                    }
+                    onWander(petWindow);
                     break;
 
                 case "idle":
-                    shouldMove = false;
                     break;
-            }
-            if (shouldMove) {
-                petMoveTo(petWindow, targetX, targetY, speed);
             }
         },
         Math.floor(1000 / PET_WINDOW.UPDATE_FPS),
