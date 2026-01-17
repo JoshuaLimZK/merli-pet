@@ -12,6 +12,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
  * @property {THREE.AnimationAction} [idle] - Idle animation action
  * @property {THREE.AnimationAction} [walk] - Walk animation action
  * @property {THREE.AnimationAction} [float] - Float animation action
+ * @property {THREE.AnimationAction} [blink] - Blinking animation action (additive)
  */
 
 /**
@@ -80,6 +81,9 @@ export async function loadPetModel(scene, modelSize) {
     const gltf = await loadGLB("../../assets/Merli.glb");
     const model = gltf.scene;
 
+    // Debug: Log model metadata
+    debugModelMetadata(gltf);
+
     // Center and scale the model
     centerAndScaleModel(model, modelSize);
     scene.add(model);
@@ -105,7 +109,118 @@ export async function loadPetModel(scene, modelSize) {
 
         // Start with idle (which is walking)
         actions.idle.play();
+
+        // Find and set up the blinking animation as additive
+        const blinkClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "blink",
+        );
+
+        if (blinkClip) {
+            const blinkAction = mixer.clipAction(blinkClip);
+            blinkAction.setLoop(THREE.LoopOnce, 1);
+            blinkAction.clampWhenFinished = true;
+            blinkAction.weight = 1.0;
+            actions.blink = blinkAction;
+            blinkFunction();
+        }
     }
 
     return { model, mixer, actions };
+
+    function blinkFunction() {
+        const delay = Math.random() * 5 + 2; // Random delay between 2 to 7 seconds
+        setTimeout(() => {
+            const blinkAction = actions.blink;
+            if (blinkAction) {
+                blinkAction.reset();
+                blinkAction.play();
+            }
+            blinkFunction();
+        }, delay * 1000);
+    }
+}
+
+/**
+ * Debug function to log all metadata from a GLB/GLTF model
+ * @param {GLTF} gltf - The loaded GLTF object
+ * @returns {void}
+ */
+export function debugModelMetadata(gltf) {
+    console.group("🔍 Model Metadata Debug");
+
+    // Animations
+    console.group("📽️ Animations (" + gltf.animations.length + ")");
+    gltf.animations.forEach((clip, i) => {
+        console.log(
+            `  [${i}] "${clip.name}" - Duration: ${clip.duration.toFixed(4)}s, Tracks: ${clip.tracks.length}, Type: ${clip.tracks[0]?.ValueTypeName || "N/A"}, Parent: ${clip.tracks[0]?.name.split(".")[0] || "N/A"}`,
+        );
+        clip.tracks.forEach((track) => {
+            console.log(`      └─ ${track.name} (${track.constructor.name})`);
+        });
+    });
+    console.groupEnd();
+
+    // Scene hierarchy
+    console.group("🌳 Scene Hierarchy");
+    /**
+     * @param {THREE.Object3D} obj
+     * @param {number} depth
+     */
+    function traverseHierarchy(obj, depth = 0) {
+        const indent = "  ".repeat(depth);
+        const type = obj.type;
+        const info = [];
+
+        if (obj instanceof THREE.Mesh) {
+            const geo = obj.geometry;
+            info.push(`vertices: ${geo.attributes.position?.count || 0}`);
+        }
+        if (obj instanceof THREE.SkinnedMesh) {
+            info.push(`skinned`);
+        }
+        if (obj instanceof THREE.Bone) {
+            info.push(`bone`);
+        }
+
+        console.log(
+            `${indent}${obj.name || "(unnamed)"} [${type}]${info.length ? " - " + info.join(", ") : ""}`,
+        );
+
+        obj.children.forEach((child) => traverseHierarchy(child, depth + 1));
+    }
+    traverseHierarchy(gltf.scene);
+    console.groupEnd();
+
+    // Materials
+    console.group("🎨 Materials");
+    /** @type {Set<THREE.Material>} */
+    const materials = new Set();
+    gltf.scene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh && obj.material) {
+            if (Array.isArray(obj.material)) {
+                obj.material.forEach((m) => materials.add(m));
+            } else {
+                materials.add(obj.material);
+            }
+        }
+    });
+    materials.forEach((mat) => {
+        console.log(`  "${mat.name || "(unnamed)"}" - ${mat.type}`);
+    });
+    console.groupEnd();
+
+    // Bounding box
+    console.group("📦 Bounding Box");
+    const box = new THREE.Box3().setFromObject(gltf.scene);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    console.log(
+        `  Size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`,
+    );
+    console.log(
+        `  Center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`,
+    );
+    console.groupEnd();
+
+    console.groupEnd();
 }
