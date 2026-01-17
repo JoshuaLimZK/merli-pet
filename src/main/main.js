@@ -212,35 +212,6 @@ app.whenReady().then(() => {
     createPetWindow(!app.isPackaged);
 
     startPetUpdateLoop();
-
-    // Testing OpenAI Realtime
-    setTimeout(() => {
-        if (isOpenAIInitialized && openAIModule) {
-            openAIModule
-                .sendMessageToMerliAgent(
-                    "Hello Merli, how are you today?",
-                    /**
-                     * @param {string} delta
-                     */
-                    (delta) => {
-                        // Print each chunk as it arrives
-                        process.stdout.write(delta);
-                    },
-                    /**
-                     * @param {string} fullText
-                     */
-                    (fullText) => {
-                        console.log("\n✅ Complete response:", fullText);
-                    },
-                )
-                .catch((error) => {
-                    console.error(
-                        "Error sending message to Merli agent:",
-                        error,
-                    );
-                });
-        }
-    }, 5000);
 });
 
 app.on("window-all-closed", () => {
