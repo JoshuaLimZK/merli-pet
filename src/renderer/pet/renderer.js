@@ -82,7 +82,7 @@ const win = /** @type {any} */ (window);
     // ============================================================================
 
     /**
-    * @typedef {'idle' | 'walk' | 'float' | 'dance'} AnimationState
+     * @typedef {'idle' | 'walk' | 'float' | 'dance'} AnimationState
      */
 
     /**
