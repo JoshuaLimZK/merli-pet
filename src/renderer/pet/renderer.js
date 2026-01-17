@@ -14,6 +14,7 @@ import { crossFadeToAction, lerpRotation } from "./animation.js";
  * @property {() => Promise<any>} getPetConfig
  * @property {(callback: (data: any) => void) => void} onMouseMove
  * @property {(callback: (data: any) => void) => void} onBehaviorStateChange
+ * @property {(callback: (data: { stopped: boolean, angle: number }) => void) => void} onMove
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: {x: number, y: number}) => void} startDrag
  * @property {() => void} stopDrag
@@ -42,7 +43,7 @@ const win = /** @type {any} */ (window);
         CAMERA_CONFIG.FOV,
         CAMERA_CONFIG.ASPECT,
         CAMERA_CONFIG.NEAR,
-        CAMERA_CONFIG.FAR
+        CAMERA_CONFIG.FAR,
     );
     camera.position.z = CAMERA_CONFIG.POSITION_Z;
     camera.position.y = CAMERA_CONFIG.POSITION_Y;
@@ -59,18 +60,18 @@ const win = /** @type {any} */ (window);
     // Lighting
     const ambientLight = new THREE.AmbientLight(
         LIGHTING_CONFIG.AMBIENT_COLOR,
-        LIGHTING_CONFIG.AMBIENT_INTENSITY
+        LIGHTING_CONFIG.AMBIENT_INTENSITY,
     );
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(
         LIGHTING_CONFIG.DIRECTIONAL_COLOR,
-        LIGHTING_CONFIG.DIRECTIONAL_INTENSITY
+        LIGHTING_CONFIG.DIRECTIONAL_INTENSITY,
     );
     directionalLight.position.set(
         LIGHTING_CONFIG.DIRECTIONAL_POSITION.x,
         LIGHTING_CONFIG.DIRECTIONAL_POSITION.y,
-        LIGHTING_CONFIG.DIRECTIONAL_POSITION.z
+        LIGHTING_CONFIG.DIRECTIONAL_POSITION.z,
     );
     scene.add(directionalLight);
 
@@ -121,7 +122,7 @@ const win = /** @type {any} */ (window);
     try {
         const { model, mixer, actions } = await loadPetModel(
             scene,
-            PET_CONFIG.MODEL_SIZE
+            PET_CONFIG.MODEL_SIZE,
         );
         petState.model = model;
         petState.mixer = mixer;
@@ -134,7 +135,7 @@ const win = /** @type {any} */ (window);
                     petState.actions,
                     petState.currentState,
                     "walk",
-                    0
+                    0,
                 )
             );
         }
@@ -147,90 +148,39 @@ const win = /** @type {any} */ (window);
     // ============================================================================
 
     /**
-     * @typedef {'follow' | 'wander' | 'idle' | 'dragging'} BehaviorState
+     * @typedef {'follow' | 'wander' | 'idle' | 'dragging' | 'imageDragIn'} BehaviorState
      */
 
     /** @type {BehaviorState} */
     let currentBehaviorState = "follow";
 
     if (win.electronAPI) {
-        // Handle mouse movement data
-        win.electronAPI.onMouseMove((data) => {
-            isMouseWithinStopDistance = data.isWithinStopDistance;
+        win.electronAPI.onMove((data) => {
+            const stopped = data.stopped;
+            const angle = data.angle;
 
-            // Animation logic depends on behavior state
-            if (currentBehaviorState === "idle") {
-                // In idle state, always play idle animation
-                if (petState.currentState !== "idle" && petState.actions.idle) {
-                    petState.currentState = /** @type {AnimationState} */ (
-                        crossFadeToAction(
-                            petState.actions,
-                            petState.currentState,
-                            "idle"
-                        )
-                    );
-                }
-                // Face forward when idle
-                petState.targetRotationY = 0;
-            } else if (currentBehaviorState === "dragging") {
-                // When being dragged, play idle animation and face forward
-                if (
-                    petState.currentState !== "float" &&
-                    petState.actions.float
-                ) {
-                    petState.currentState = /** @type {AnimationState} */ (
-                        crossFadeToAction(
-                            petState.actions,
-                            petState.currentState,
-                            "float"
-                        )
-                    );
-                }
-                // Face forward (toward the user) when being picked up
+            if (stopped) {
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "idle",
+                    )
+                );
                 petState.targetRotationY = 0;
             } else {
-                // In follow/wander states, switch based on movement
-                const isMoving =
-                    currentBehaviorState === "wander" ||
-                    (currentBehaviorState === "follow" &&
-                        !data.isWithinStopDistance);
-
-                if (isMoving) {
-                    if (
-                        petState.currentState !== "walk" &&
-                        petState.actions.walk
-                    ) {
-                        petState.currentState = /** @type {AnimationState} */ (
-                            crossFadeToAction(
-                                petState.actions,
-                                petState.currentState,
-                                "walk"
-                            )
-                        );
-                    }
-                    // Face direction of movement
-                    petState.targetRotationY =
-                        data.angleToTarget || data.angleMouseToWindow;
-                } else {
-                    if (
-                        petState.currentState !== "idle" &&
-                        petState.actions.idle
-                    ) {
-                        petState.currentState = /** @type {AnimationState} */ (
-                            crossFadeToAction(
-                                petState.actions,
-                                petState.currentState,
-                                "idle"
-                            )
-                        );
-                    }
-                    // Face forward when stopped
-                    petState.targetRotationY = 0;
-                }
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "walk",
+                    )
+                );
+                petState.targetRotationY = angle;
             }
         });
 
-        // Handle behavior state changes from main process
+        // Handle behavior state changes from main process.
         win.electronAPI.onBehaviorStateChange((data) => {
             currentBehaviorState = data.state;
             console.log("Behavior state changed to:", currentBehaviorState);
@@ -314,7 +264,7 @@ const win = /** @type {any} */ (window);
                 win.electronAPI.startDrag(dragStartOffset);
                 console.log(
                     "Started dragging pet with offset:",
-                    dragStartOffset
+                    dragStartOffset,
                 );
             }, 300); // Hold time in ms
         }
@@ -464,7 +414,7 @@ const win = /** @type {any} */ (window);
         petState.currentRotationY = lerpRotation(
             petState.currentRotationY,
             petState.targetRotationY,
-            rotationSpeed
+            rotationSpeed,
         );
 
         if (petState.model) {
