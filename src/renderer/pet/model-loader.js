@@ -203,6 +203,14 @@ export async function loadPetModel(scene, modelSize) {
             openedEyesAction.weight = 1.0;
             actions.openedEyes = openedEyesAction;
         }
+
+        const chatClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "chat",
+        );
+        if (chatClip) {
+            const chatAction = mixer.clipAction(chatClip);
+            actions.chat = chatAction;
+        }
     }
 
     return { model, mixer, actions };

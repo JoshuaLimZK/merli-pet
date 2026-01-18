@@ -334,16 +334,22 @@ ipcMain.on("interrupt-special-action", () => {
 // Track whether the pet is currently speaking
 ipcMain.on("pet-speaking", (_event, { speaking }) => {
     isPetSpeaking = Boolean(speaking);
+    const petWindow = getPetWindow();
+    if (petWindow) {
+        petWindow.webContents.send("chat-state", {
+            speaking: isPetSpeaking,
+        });
+    }
 });
 
 // Start pomodoro timer window
-ipcMain.on("start-pomodoro", (_event, { duration }) => {
+ipcMain.on("start-pomodoro", (_event, { duration, mode }) => {
     const minutes = Number(duration);
     if (!Number.isFinite(minutes) || minutes <= 0) {
         console.warn("Invalid pomodoro duration:", duration);
         return;
     }
-    pomodoroWindow.createPomodoroWindow(minutes);
+    pomodoroWindow.createPomodoroWindow(minutes, mode);
 });
 
 // Show quote from mic renderer (AI response)

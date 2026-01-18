@@ -13,24 +13,29 @@ let pomodoroWindow = null;
 /**
  * Create or focus the pomodoro window
  * @param {number} durationMinutes
+ * @param {string} [mode]
  * @returns {BrowserWindow}
  */
-function createPomodoroWindow(durationMinutes) {
+function createPomodoroWindow(durationMinutes, mode) {
     if (pomodoroWindow && !pomodoroWindow.isDestroyed()) {
         pomodoroWindow.show();
         pomodoroWindow.focus();
-        pomodoroWindow.webContents.send("pomodoro-start", durationMinutes);
+        pomodoroWindow.webContents.send("pomodoro-start", {
+            duration: durationMinutes,
+            mode,
+        });
         return pomodoroWindow;
     }
 
     pomodoroWindow = new BrowserWindow({
-        width: 360,
-        height: 240,
-        frame: false,
-        titleBarStyle: "hidden",
-        transparent: true,
+        width: 320,
+        height: 440,
         resizable: false,
         alwaysOnTop: true,
+        frame: false,
+        transparent: true,
+        movable: true,
+        titleBarStyle: "hidden",
         title: "Pomodoro",
         webPreferences: {
             contextIsolation: true,
@@ -44,7 +49,10 @@ function createPomodoroWindow(durationMinutes) {
 
     pomodoroWindow.once("ready-to-show", () => {
         pomodoroWindow?.show();
-        pomodoroWindow?.webContents.send("pomodoro-start", durationMinutes);
+        pomodoroWindow?.webContents.send("pomodoro-start", {
+            duration: durationMinutes,
+            mode,
+        });
     });
 
     pomodoroWindow.on("closed", () => {

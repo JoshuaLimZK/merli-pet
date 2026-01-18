@@ -8,13 +8,41 @@
     </head>
     <body>
         <div class="container">
-            <h1>Pomodoro</h1>
-            <div id="time" class="time">25:00</div>
-            <div id="status" class="status">Ready</div>
-            <div class="controls">
-                <button id="startBtn">Start</button>
-                <button id="pauseBtn" disabled>Pause</button>
-                <button id="resetBtn" disabled>Reset</button>
+            <div class="titlebar">
+                <h1>Pomodoro</h1>
+            </div>
+            <div
+                class="center-container"
+                style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                "
+            >
+                <div class="ring">
+                    <svg viewBox="0 0 120 120" class="ring-svg">
+                        <circle class="ring-track" cx="60" cy="60" r="52" />
+                        <circle
+                            id="ringProgress"
+                            class="ring-progress"
+                            cx="60"
+                            cy="60"
+                            r="52"
+                        />
+                    </svg>
+                    <div class="ring-center">
+                        <div id="time" class="time">25:00</div>
+                        <div id="status" class="status">Focus</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button id="startBtn" title="Start">▶︎</button>
+                    <button id="pauseBtn" title="Pause" disabled>⏸</button>
+                    <button id="skipBtn" title="Skip">⏭</button>
+                    <button id="resetBtn" title="Reset" disabled>↺</button>
+                </div>
             </div>
         </div>
         <script src="renderer.js"></script>
