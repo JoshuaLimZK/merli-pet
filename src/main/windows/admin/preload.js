@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require("electron");
  * @property {(state: string) => void} setState - Set the pet behavior state
  * @property {(callback: (state: string) => void) => void} onStateChange - Listen for state changes
  * @property {() => void} triggerQuote - Trigger a random quote
+ * @property {() => void} interruptAction - Interrupt current special action
  */
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -15,4 +16,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
             callback(state),
         ),
     triggerQuote: () => ipcRenderer.send("admin-trigger-quote"),
+    interruptAction: () => ipcRenderer.send("interrupt-special-action"),
 });

@@ -15,21 +15,69 @@ const __dirname = path.dirname(__filename);
  * @typedef {import('electron').BrowserWindow} PetWindow
  */
 
+// Track active state for interruption
+/** @type {NodeJS.Timeout | null} */
+let activeMovingInterval = null;
+/** @type {BrowserWindow | null} */
+let activeFlagPoleWindow = null;
+/** @type {PetWindow | null} */
+let activePetWindow = null;
+
+/**
+ * Interrupt and clean up the flagpole animation
+ */
+export function interruptFlagPole() {
+    console.log("Interrupting flagpole animation");
+    
+    // Clear any active movement interval
+    if (activeMovingInterval) {
+        clearInterval(activeMovingInterval);
+        activeMovingInterval = null;
+    }
+    
+    // Remove the IPC listener
+    ipcMain.removeAllListeners("ended-flag-raising");
+    
+    // Disable armsOut animation on pet
+    if (activePetWindow && !activePetWindow.isDestroyed()) {
+        activePetWindow.webContents.send("toggle-animation", {
+            animation: "armsOut",
+            enabled: false,
+        });
+    }
+    
+    // Close the flagpole window
+    if (activeFlagPoleWindow && !activeFlagPoleWindow.isDestroyed()) {
+        activeFlagPoleWindow.close();
+    }
+    
+    // Reset state
+    activeFlagPoleWindow = null;
+    activePetWindow = null;
+    
+    // Return to idle
+    transitionToState("idle", false, 1000);
+}
+
 /**
  * Move pet to flagpole position at bottom right of screen
  * @param {PetWindow} petWindow - The pet window instance
  */
 export function flagPoleAnimation(petWindow) {
+    // Store pet window for interruption
+    activePetWindow = petWindow;
+    
     // Move to the bottom left
     const screenHeight = screen.getPrimaryDisplay().workAreaSize.height;
     const targetX = 0 + PET_WINDOW.SIZE / 2 + 90;
     const targetY = screenHeight - PET_WINDOW.SIZE / 2 + 30;
     const speed = 30; // TODO: default is 5
 
-    const movingInterval = setInterval(() => {
+    activeMovingInterval = setInterval(() => {
         const isMoving = petMoveTo(petWindow, targetX, targetY, speed);
         if (!isMoving) {
-            clearInterval(movingInterval);
+            clearInterval(activeMovingInterval);
+            activeMovingInterval = null;
             createFlagPoleWindowAnimation(petWindow);
         }
     }, 16); // Approx. 60 FPS
@@ -43,6 +91,9 @@ function createFlagPoleWindowAnimation(petWindow) {
         width: Math.floor(screenHeight / 2),
         height: Math.floor(screenHeight / 2),
     });
+
+    // Store for interruption
+    activeFlagPoleWindow = flagPoleWindow;
 
     pushFlagPoleAnimation(flagPoleWindow, petWindow);
 }
@@ -64,7 +115,7 @@ function pushFlagPoleAnimation(flagPoleWindow, petWindow) {
 
     setTimeout(() => {
         const oldPetPosX = petWindow.getBounds().x;
-        const movingInterval = setInterval(() => {
+        activeMovingInterval = setInterval(() => {
             const isMoving = petMoveTo(petWindow, targetX, targetY, speed);
             const newPetPosX = petWindow.getBounds().x;
             const distMoved = Math.abs(newPetPosX - oldPetPosX);
@@ -75,7 +126,8 @@ function pushFlagPoleAnimation(flagPoleWindow, petWindow) {
                 height: Math.floor(screenHeight / 2),
             });
             if (!isMoving) {
-                clearInterval(movingInterval);
+                clearInterval(activeMovingInterval);
+                activeMovingInterval = null;
                 // Disable armsOut and close the flagpole window after a delay
                 petWindow.webContents.send("set-rotation", {
                     angle: Math.PI / 2,
@@ -96,6 +148,9 @@ function pushFlagPoleAnimation(flagPoleWindow, petWindow) {
                     if (!flagPoleWindow.isDestroyed()) {
                         flagPoleWindow.close();
                     }
+                    // Reset state
+                    activeFlagPoleWindow = null;
+                    activePetWindow = null;
                     // Restart the normal behavior cycle
                     transitionToState("idle", false, 5000);
                 });

@@ -10,6 +10,39 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Track active state for interruption
+/** @type {NodeJS.Timeout | null} */
+let activeMovingInterval = null;
+/** @type {BrowserWindow | null} */
+let activeOtterWindow = null;
+
+/**
+ * Interrupt and clean up the otter crossing animation
+ */
+export function interruptOtterCrossing() {
+    console.log("Interrupting otter crossing animation");
+    
+    // Clear any active movement interval
+    if (activeMovingInterval) {
+        clearInterval(activeMovingInterval);
+        activeMovingInterval = null;
+    }
+    
+    // Remove the IPC listener
+    ipcMain.removeAllListeners("ended-otter-crossing");
+    
+    // Close the otter crossing window
+    if (activeOtterWindow && !activeOtterWindow.isDestroyed()) {
+        activeOtterWindow.close();
+    }
+    
+    // Reset state
+    activeOtterWindow = null;
+    
+    // Return to idle
+    transitionToState("idle", false, 1000);
+}
+
 /**
  * Start the otter crossing animation sequence
  * @param {BrowserWindow} petWindow - The pet window instance
@@ -22,10 +55,11 @@ export function otterCrossingAnimation(petWindow) {
     const targetY = screenHeight / 2 - PET_WINDOW.SIZE / 2 + 30;
     const speed = 5;
 
-    const movingInterval = setInterval(() => {
+    activeMovingInterval = setInterval(() => {
         const isMoving = petMoveTo(petWindow, targetX, targetY, speed);
         if (!isMoving) {
-            clearInterval(movingInterval);
+            clearInterval(activeMovingInterval);
+            activeMovingInterval = null;
             startOtterCrossing(petWindow);
         }
     }, 16); // Approx. 60 FPS
@@ -41,6 +75,9 @@ function startOtterCrossing(petWindow) {
 
     // Create the otter crossing window
     const otterCrossingWindow = createOtterCrossingWindow();
+    
+    // Store for interruption
+    activeOtterWindow = otterCrossingWindow;
 
     // Wait for window to be ready, then start crossing
     otterCrossingWindow.webContents.once("did-finish-load", () => {
@@ -55,6 +92,8 @@ function startOtterCrossing(petWindow) {
         if (!otterCrossingWindow.isDestroyed()) {
             otterCrossingWindow.close();
         }
+        // Reset state
+        activeOtterWindow = null;
         // Restart the normal behavior cycle
         transitionToState("idle", false, 5000);
     });
