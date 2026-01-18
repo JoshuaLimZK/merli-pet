@@ -273,36 +273,36 @@ async function initializeOpenAI() {
                                 turn_detection: null,
                             },
                         },
-                        tool_choice: "auto",
-                        tools: [
-                            {
-                                type: "function",
-                                description:
-                                    "Get an object with all bus stop codes",
-                                name: "getBusStopCode",
-                                parameters: null,
-                            },
-                            {
-                                type: "function",
-                                description:
-                                    "Get the bus arrival time for a given bus stop and bus number",
-                                name: "getBusTiming",
-                                parameters: {
-                                    type: "object",
-                                    properties: {
-                                        busStop: {
-                                            type: "string",
-                                            description: "The bus stop code",
-                                        },
-                                        busNumber: {
-                                            type: "string",
-                                            description: "The bus number",
-                                        },
-                                    },
-                                    required: ["busStop", "busNumber"],
-                                },
-                            },
-                        ],
+                        // tool_choice: "auto",
+                        // tools: [
+                        //     {
+                        //         type: "function",
+                        //         description:
+                        //             "Get an object with all bus stop codes",
+                        //         name: "getBusStopCode",
+                        //         parameters: null,
+                        //     },
+                        //     {
+                        //         type: "function",
+                        //         description:
+                        //             "Get the bus arrival time for a given bus stop and bus number",
+                        //         name: "getBusTiming",
+                        //         parameters: {
+                        //             type: "object",
+                        //             properties: {
+                        //                 busStop: {
+                        //                     type: "string",
+                        //                     description: "The bus stop code",
+                        //                 },
+                        //                 busNumber: {
+                        //                     type: "string",
+                        //                     description: "The bus number",
+                        //                 },
+                        //             },
+                        //             required: ["busStop", "busNumber"],
+                        //         },
+                        // },
+                        // ],
                     },
                 }),
             );
@@ -367,7 +367,24 @@ function handleOpenAIEvent(event) {
             console.log("✅ Response complete:", currentResponse);
             if (currentResponse.length > 0) {
                 // Use HTTP streaming instead of WebSocket
-                streamElevenLabsAudio(currentResponse);
+                if (
+                    currentResponse.startsWith("{") &&
+                    currentResponse.endsWith("}")
+                ) {
+                    // Extract bus stop description and bus number
+                    const content = currentResponse.slice(1, -1);
+                    const [busStopDesc, busNumber] = content
+                        .split(",")
+                        .map((s) => s.trim());
+                    console.log(
+                        "Fetching bus timing for:",
+                        busStopDesc,
+                        busNumber,
+                    );
+                    // Request bus timing from main process
+                } else {
+                    streamElevenLabsAudio(currentResponse);
+                }
                 // Show the response text in a quote bubble
                 // Estimate duration: ~80ms per character for TTS speech + 1s buffer
                 const estimatedDuration = Math.max(
