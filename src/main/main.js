@@ -493,7 +493,7 @@ function musicCheckMac() {
             return "paused"
         end if
     end tell
-  `;
+    `;
     return new Promise((resolve) => {
         exec(`osascript -e '${script}'`, (error, stdout, stderr) => {
             if (error) {
@@ -507,6 +507,25 @@ function musicCheckMac() {
             resolve(stdout.trim() === "playing");
         });
     });
+}
+
+import util from "util";
+const execPromise = util.promisify(exec);
+
+async function musicCheckWindows() {
+    try {
+        const { stdout } = await execPromise(
+            `powershell -command "Get-Process -Name Spotify -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | Select-Object -ExpandProperty MainWindowTitle"`,
+        );
+        const title = stdout.trim();
+        console.log(title);
+        // When Spotify is playing, the window title shows "Artist - Song"
+        // When paused or not playing, it shows "Spotify" or is empty
+        return !title.includes("Spotify");
+    } catch (error) {
+        console.error(`Error checking Spotify state: ${error.message}`);
+        return false;
+    }
 }
 
 // ======================
@@ -604,6 +623,21 @@ function startPetUpdateLoop() {
                         if (process.platform === "darwin") {
                             idleMusicInterval = setInterval(() => {
                                 musicCheckMac().then((musicPlaying) => {
+                                    console.log("Music playing:", musicPlaying);
+                                    if (musicPlaying) {
+                                        petWindow.webContents.send(
+                                            "play-idle-music",
+                                        );
+                                    } else {
+                                        petWindow.webContents.send(
+                                            "stop-idle-music",
+                                        );
+                                    }
+                                });
+                            }, 1000);
+                        } else if (process.platform === "win32") {
+                            idleMusicInterval = setInterval(() => {
+                                musicCheckWindows().then((musicPlaying) => {
                                     console.log("Music playing:", musicPlaying);
                                     if (musicPlaying) {
                                         petWindow.webContents.send(

@@ -1,7 +1,7 @@
 import { PET_WINDOW } from "../pet/config.js";
 import { petMoveTo } from "../../movement/main.js";
 import { screen, BrowserWindow, ipcMain } from "electron";
-import path from "path/win32";
+import path from "path";
 import { fileURLToPath } from "url";
 import { getPetPosition } from "../pet/window.js";
 import { transitionToState } from "../../state/petBehavior.js";

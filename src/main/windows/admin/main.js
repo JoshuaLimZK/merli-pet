@@ -15,7 +15,7 @@ export function createAdminWindow() {
     const display = screen.getPrimaryDisplay();
     const { width: screenWidth } = display.workAreaSize;
 
-    const windowWidth = 800;
+    const windowWidth = 400;
     const windowHeight = 600;
     const margin = 20;
 
@@ -24,8 +24,10 @@ export function createAdminWindow() {
         height: windowHeight,
         x: screenWidth - windowWidth - margin,
         y: margin,
-        frame: true,
-        transparent: false,
+        frame: false,
+        // Hide the native title bar so we can provide a custom draggable header
+        titleBarStyle: "hidden",
+        transparent: true,
         movable: true,
         title: "Admin",
         webPreferences: {
