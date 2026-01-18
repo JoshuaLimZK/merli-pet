@@ -202,7 +202,7 @@ function sendRandomQuote(quote = null, duration = 5000) {
 
     // Store original size to prevent drift
     const quoteWidth = 300;
-    const quoteHeight = 100;
+    const quoteHeight = 300;
 
     let interval = setInterval(
         () => {
