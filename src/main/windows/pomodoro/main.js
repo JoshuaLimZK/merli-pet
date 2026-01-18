@@ -26,6 +26,9 @@ function createPomodoroWindow(durationMinutes) {
     pomodoroWindow = new BrowserWindow({
         width: 360,
         height: 240,
+        frame: false,
+        titleBarStyle: "hidden",
+        transparent: true,
         resizable: false,
         alwaysOnTop: true,
         title: "Pomodoro",
