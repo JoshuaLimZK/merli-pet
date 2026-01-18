@@ -88,6 +88,21 @@ let currentStreamController = null;
 let playbackAudioContext = null;
 /** @type {AudioBufferSourceNode | null} */
 let currentSource = null;
+/** @type {boolean} */
+let isSpeaking = false;
+
+/**
+ * Update speaking state and notify main process
+ * @param {boolean} next
+ * @returns {void}
+ */
+function setSpeaking(next) {
+    if (isSpeaking === next) return;
+    isSpeaking = next;
+    if (_window.api.sendToMain) {
+        _window.api.sendToMain("pet-speaking", { speaking: isSpeaking });
+    }
+}
 
 // Response tracking
 /** @type {string} */
@@ -393,10 +408,16 @@ function handleOpenAIEvent(event) {
                         currentResponse.length * 80 + 1000,
                     );
                     if (_window.api.sendToMain) {
-                        _window.api.sendToMain("show-quote", {
-                            text: currentResponse,
-                            duration: estimatedDuration,
-                        });
+                        if (!isSpeaking) {
+                            _window.api.sendToMain("show-quote", {
+                                text: currentResponse,
+                                duration: estimatedDuration,
+                            });
+                        } else {
+                            console.log(
+                                "🗣️ Skipping quote because pet is speaking",
+                            );
+                        }
                     }
                 }
             }
@@ -477,14 +498,18 @@ async function playAudioBuffer(arrayBuffer) {
         currentSource.buffer = audioBuffer;
         currentSource.connect(playbackAudioContext.destination);
 
+        setSpeaking(true);
+
         currentSource.onended = () => {
             console.log("✅ Audio playback complete");
             currentSource = null;
+            setSpeaking(false);
         };
 
         currentSource.start(0);
     } catch (error) {
         console.error("Error playing audio:", error);
+        setSpeaking(false);
     }
 }
 
@@ -504,6 +529,8 @@ function stopAudioPlayback() {
         }
         currentSource = null;
     }
+
+    setSpeaking(false);
 
     // Close audio context
     if (playbackAudioContext) {
