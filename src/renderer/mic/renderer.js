@@ -371,31 +371,32 @@ function handleOpenAIEvent(event) {
                     currentResponse.startsWith("{") &&
                     currentResponse.endsWith("}")
                 ) {
-                    // Extract bus stop description and bus number
+                    // Extract bus stop code and bus number
                     const content = currentResponse.slice(1, -1);
-                    const [busStopDesc, busNumber] = content
+                    const [busStopCode, busNumber] = content
                         .split(",")
                         .map((s) => s.trim());
-                    console.log(
-                        "Fetching bus timing for:",
-                        busStopDesc,
-                        busNumber,
-                    );
+                    getBusTiming(busStopCode, busNumber).then((timing) => {
+                        console.log("busTimingIs");
+                        sendTextMessage(
+                            `The bus ${busNumber} at stop ${busStopCode} is arriving in ${timing}.`,
+                        );
+                    });
                     // Request bus timing from main process
                 } else {
                     streamElevenLabsAudio(currentResponse);
-                }
-                // Show the response text in a quote bubble
-                // Estimate duration: ~80ms per character for TTS speech + 1s buffer
-                const estimatedDuration = Math.max(
-                    3000,
-                    currentResponse.length * 80 + 1000,
-                );
-                if (_window.api.sendToMain) {
-                    _window.api.sendToMain("show-quote", {
-                        text: currentResponse,
-                        duration: estimatedDuration,
-                    });
+                    // Show the response text in a quote bubble
+                    // Estimate duration: ~80ms per character for TTS speech + 1s buffer
+                    const estimatedDuration = Math.max(
+                        3000,
+                        currentResponse.length * 80 + 1000,
+                    );
+                    if (_window.api.sendToMain) {
+                        _window.api.sendToMain("show-quote", {
+                            text: currentResponse,
+                            duration: estimatedDuration,
+                        });
+                    }
                 }
             }
             currentResponse = "";
@@ -860,11 +861,14 @@ async function getBusTiming(busStop, busNumber) {
         },
     );
     const data = await response.json();
-    return data.Services[0].NextBus.EstimatedArrival
-        ? Math.ceil(
-              (new Date(data.Services[0].NextBus.EstimatedArrival) -
-                  new Date()) /
-                  60000,
-          ) + " Mins"
-        : "No Arrival Info";
+    const nextBus = data?.Services?.[0]?.NextBus;
+    const estimatedArrival = nextBus?.EstimatedArrival;
+    if (!estimatedArrival) {
+        return "No Arrival Info";
+    }
+
+    const minutes =
+        Math.ceil((Date.parse(estimatedArrival) - Date.now()) / 60000) +
+        " Mins";
+    return minutes;
 }
