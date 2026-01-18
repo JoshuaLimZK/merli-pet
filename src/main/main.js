@@ -226,11 +226,98 @@ ipcMain.on("admin-trigger-quote", () => {
     sendRandomQuote();
 });
 
-// Pet clicked handler
+// Pet clicked handler - Easter egg: stare after 10 pets
+/** @type {number} */
+let petClickCount = 0;
+/** @type {NodeJS.Timeout | null} */
+let petClickResetTimer = null;
+/** @type {boolean} */
+let isStareActive = false;
+
 ipcMain.on("pet-clicked", (_event, region) => {
     console.log("Pet clicked:", region);
-    // TODO: Add click handling logic here
+
+    // Don't count during stare
+    if (isStareActive) return;
+
+    // Increment click counter
+    petClickCount++;
+    console.log(`Pet click count: ${petClickCount}`);
+
+    // Reset counter after 5 seconds of no clicks
+    if (petClickResetTimer) {
+        clearTimeout(petClickResetTimer);
+    }
+    petClickResetTimer = setTimeout(() => {
+        petClickCount = 0;
+        console.log("Pet click count reset");
+    }, 5000);
+
+    // Easter egg: 10 pets triggers the stare
+    if (petClickCount >= 10) {
+        petClickCount = 0;
+        if (petClickResetTimer) {
+            clearTimeout(petClickResetTimer);
+            petClickResetTimer = null;
+        }
+        triggerStareEasterEgg();
+    }
 });
+
+/**
+ * Trigger the stare easter egg - expand window, zoom camera, stare for 5 seconds
+ */
+function triggerStareEasterEgg() {
+    const petWindow = getPetWindow();
+    if (!petWindow || isStareActive) return;
+
+    console.log("👁️ STARE EASTER EGG TRIGGERED!");
+    isStareActive = true;
+
+    // Store original bounds
+    const originalBounds = petWindow.getBounds();
+
+    // Get screen dimensions
+    const { width: screenWidth, height: screenHeight } =
+        screen.getPrimaryDisplay().workAreaSize;
+
+    // Set pet to idle for infinity
+    transitionToState("idle", false, Infinity);
+
+    // Expand window to full screen
+    petWindow.setBounds({
+        x: 0,
+        y: 0,
+        width: screenWidth,
+        height: screenHeight,
+    });
+
+    // Tell renderer to zoom camera and resize
+    petWindow.webContents.send("stare-mode", {
+        enabled: true,
+        width: screenWidth,
+        height: screenHeight,
+    });
+
+    // After 5 seconds, revert everything
+    setTimeout(() => {
+        // Restore original window bounds
+        petWindow.setBounds(originalBounds);
+
+        // Tell renderer to restore camera
+        petWindow.webContents.send("stare-mode", {
+            enabled: false,
+            width: PET_WINDOW.SIZE,
+            height: PET_WINDOW.SIZE,
+        });
+
+        // Return to normal behavior
+        transitionToState("idle", false, 3000);
+
+        isStareActive = false;
+        console.log("👁️ Stare easter egg ended");
+    }, 5000);
+}
 
 // Interrupt special actions handler
 ipcMain.on("interrupt-special-action", () => {
