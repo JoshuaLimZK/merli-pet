@@ -368,8 +368,9 @@ function handleOpenAIEvent(event) {
             if (currentResponse.length > 0) {
                 // Use HTTP streaming instead of WebSocket
                 if (
-                    currentResponse.startsWith("{") &&
-                    currentResponse.endsWith("}")
+                    // check if response contains { and } instead
+                    currentResponse.includes("{") &&
+                    currentResponse.includes("}")
                 ) {
                     // Extract bus stop code and bus number
                     const content = currentResponse.slice(1, -1);
