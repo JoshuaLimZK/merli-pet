@@ -16,6 +16,11 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
  * @property {THREE.AnimationAction} [blink] - Blinking animation action (additive)
  * @property {THREE.AnimationAction} [push] - Push up animation action
  * @property {THREE.AnimationAction} [armsOut] - Arms out animation action
+ * @property {THREE.AnimationAction} [closedEyes] - Closed eyes animation action (additive)
+ * @property {THREE.AnimationAction} [openedEyes] - Opened eyes animation action (additive)
+ * @property {THREE.AnimationAction} [flagRaise] - Flag raise animation action
+ * @property {THREE.AnimationAction} [swinging] - Swinging animation action
+ *
  */
 
 /**
@@ -83,15 +88,6 @@ export async function loadPetModel(scene, modelSize) {
     // Load the Merli GLB model
     const gltf = await loadGLB("../../assets/Merli.glb");
     const model = gltf.scene;
-
-    // Load the dance animation GLB (if available)
-    let danceGltf = null;
-    try {
-        danceGltf = await loadGLB("../../assets/Merli_dance.glb");
-    } catch (error) {
-        console.warn("Failed to load dance animation:", error);
-    }
-
     // Debug: Log model metadata
     debugModelMetadata(gltf);
 
@@ -115,15 +111,6 @@ export async function loadPetModel(scene, modelSize) {
         actions.idle = mixer.clipAction(walkingClip);
         actions.walk = mixer.clipAction(walkingClip);
         actions.float = mixer.clipAction(walkingClip);
-
-        if (danceGltf && danceGltf.animations.length > 0) {
-            const danceClip =
-                danceGltf.animations.find((clip) =>
-                    clip.name.toLowerCase().includes("dance"),
-                ) || danceGltf.animations[0];
-            actions.dance = mixer.clipAction(danceClip);
-            actions.dance.setLoop(THREE.LoopRepeat, Infinity);
-        }
 
         console.log(`Loaded animation "${walkingClip.name}" for all actions`);
 
@@ -163,6 +150,58 @@ export async function loadPetModel(scene, modelSize) {
             armsOutAction.setLoop(THREE.LoopRepeat, Infinity);
             armsOutAction.weight = 1.0;
             actions.armsOut = armsOutAction;
+        }
+
+        // CP_dance animation
+        const danceClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "cp_dance",
+        );
+        if (danceClip) {
+            const danceAction = mixer.clipAction(danceClip);
+            actions.dance = danceAction;
+        }
+
+        // flag raise
+        const flagRaiseClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "flag_raise",
+        );
+        if (flagRaiseClip) {
+            const flagRaiseAction = mixer.clipAction(flagRaiseClip);
+            actions.flagRaise = flagRaiseAction;
+        }
+
+        // swinging animation
+        const swingingClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "swinging",
+        );
+        if (swingingClip) {
+            const swingingAction = mixer.clipAction(swingingClip);
+            swingingAction.timeScale = 1.8;
+            actions.swinging = swingingAction;
+        }
+
+        // closed eyes (additive, toggleable)
+        const closedEyesClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "closed eyes",
+        );
+        if (closedEyesClip) {
+            //THREE.AnimationUtils.makeClipAdditive(closedEyesClip);
+            const closedEyesAction = mixer.clipAction(closedEyesClip);
+            closedEyesAction.setLoop(THREE.LoopRepeat, Infinity);
+            closedEyesAction.weight = 1.0;
+            actions.closedEyes = closedEyesAction;
+        }
+
+        // opened eyes (additive, toggleable)
+        const openedEyesClip = gltf.animations.find(
+            (clip) => clip.name.toLowerCase() === "opened eyes",
+        );
+        if (openedEyesClip) {
+            //THREE.AnimationUtils.makeClipAdditive(openedEyesClip);
+            const openedEyesAction = mixer.clipAction(openedEyesClip);
+            openedEyesAction.setLoop(THREE.LoopRepeat, Infinity);
+            openedEyesAction.weight = 1.0;
+            actions.openedEyes = openedEyesAction;
         }
     }
 

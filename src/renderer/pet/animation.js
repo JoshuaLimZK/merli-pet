@@ -10,7 +10,7 @@ export function crossFadeToAction(
     actions,
     currentState,
     newState,
-    duration = 0.3
+    duration = 0.3,
 ) {
     const previousAction = actions[currentState];
     const newAction = actions[newState];

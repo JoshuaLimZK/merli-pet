@@ -125,6 +125,22 @@ const win = /** @type {any} */ (window);
     /** @type {THREE.Clock} */
     const clock = new THREE.Clock();
 
+    /**
+     * Toggle closed eyes additive animation
+     * @param {boolean} enabled
+     */
+    function setClosedEyes(enabled) {
+        const action = petState.actions["closedEyes"];
+        if (!action) return;
+        if (enabled) {
+            action.reset();
+            action.fadeIn(0.2);
+            action.play();
+        } else {
+            action.fadeOut(0.2);
+        }
+    }
+
     // ============================================================================
     // Load Model
     // ============================================================================
@@ -170,6 +186,16 @@ const win = /** @type {any} */ (window);
             const angle = data.angle;
             lastMoveState = { stopped, angle };
 
+            if (currentBehaviorState === "dragging" || isDragging) {
+                petState.targetRotationY = stopped ? 0 : angle;
+                petState.currentState = crossFadeToAction(
+                    petState.actions,
+                    petState.currentState,
+                    "swinging",
+                );
+                return;
+            }
+
             if (!isMusicPlaying) {
                 if (stopped) {
                     petState.currentState = /** @type {AnimationState} */ (
@@ -203,13 +229,17 @@ const win = /** @type {any} */ (window);
             // Play appropriate animation for certain states
             if (currentBehaviorState === "dragging") {
                 // Play float animation when being dragged
+                console.log("Playing dragging (float) animation");
                 petState.currentState = /** @type {AnimationState} */ (
                     crossFadeToAction(
                         petState.actions,
                         petState.currentState,
-                        "float",
+                        "swinging",
                     )
                 );
+                setClosedEyes(true);
+            } else {
+                setClosedEyes(false);
             }
         });
 
@@ -297,6 +327,9 @@ const win = /** @type {any} */ (window);
 
         win.electronAPI.onMusicIdleStop(() => {
             isMusicPlaying = false;
+            if (currentBehaviorState === "dragging" || isDragging) {
+                return;
+            }
             const nextState = lastMoveState.stopped ? "idle" : "walk";
             petState.currentState = /** @type {AnimationState} */ (
                 crossFadeToAction(
@@ -379,6 +412,7 @@ const win = /** @type {any} */ (window);
 
             dragHoldTimer = setTimeout(() => {
                 isDragging = true;
+                setClosedEyes(true);
                 // Store offset so pet maintains relative position to cursor
                 dragStartOffset.x = petCenterX - clickX;
                 dragStartOffset.y = petCenterY - clickY;
@@ -396,6 +430,7 @@ const win = /** @type {any} */ (window);
         if (dragHoldTimer) {
             clearTimeout(dragHoldTimer);
             dragHoldTimer = null;
+            setClosedEyes(false);
         }
     });
 
@@ -419,6 +454,7 @@ const win = /** @type {any} */ (window);
             isDragging = false;
             win.electronAPI.stopDrag();
             console.log("Stopped dragging pet");
+            setClosedEyes(false);
 
             // Check if mouse is still over the container
             if (!container) return;
