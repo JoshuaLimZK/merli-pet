@@ -18,6 +18,7 @@ import { crossFadeToAction, lerpRotation } from "./animation.js";
  * @property {(callback: (data: { angle: number }) => void) => void} onSetRotation
  * @property {(callback: (data: { animation: string, duration?: number }) => void) => void} onPlayAnimation
  * @property {(callback: (data: { animation: string, enabled: boolean }) => void) => void} onToggleAnimation
+ * @property {(callback: (data: { speaking: boolean }) => void) => void} onChatState
  * @property {(callback: (data: { enabled: boolean, width: number, height: number }) => void) => void} onStareMode
  * @property {(callback: () => void) => void} onMusicIdlePlay
  * @property {(callback: () => void) => void} onMusicIdleStop
@@ -86,7 +87,7 @@ const win = /** @type {any} */ (window);
     // ============================================================================
 
     /**
-     * @typedef {'idle' | 'walk' | 'float' | 'push' | 'dance'} AnimationState
+     * @typedef {'idle' | 'walk' | 'float' | 'push' | 'dance' | 'swinging' | 'chat' | 'flagRaise'} AnimationState
      */
 
     /**
@@ -118,6 +119,10 @@ const win = /** @type {any} */ (window);
     let isMouseWithinStopDistance = false;
     /** @type {boolean} */
     let isMusicPlaying = false;
+    /** @type {boolean} */
+    let isChatting = false;
+    /** @type {boolean} */
+    let isAnimationLocked = false;
     /** @type {{ stopped: boolean, angle: number }} */
     let lastMoveState = { stopped: true, angle: 0 };
     /** @type {number} */
@@ -138,6 +143,29 @@ const win = /** @type {any} */ (window);
             action.play();
         } else {
             action.fadeOut(0.2);
+        }
+    }
+
+    /**
+     * Blend chat animation with idle
+     * @param {boolean} enabled
+     */
+    function setChatOverlay(enabled) {
+        const idleAction = petState.actions["idle"];
+        const chatAction = petState.actions["chat"];
+        if (enabled) {
+            if (idleAction) {
+                idleAction.reset();
+                idleAction.fadeIn(0.2);
+                idleAction.play();
+            }
+            if (chatAction) {
+                chatAction.reset();
+                chatAction.fadeIn(0.2);
+                chatAction.play();
+            }
+        } else if (chatAction) {
+            chatAction.fadeOut(0.2);
         }
     }
 
@@ -185,6 +213,16 @@ const win = /** @type {any} */ (window);
             const stopped = data.stopped;
             const angle = data.angle;
             lastMoveState = { stopped, angle };
+
+            if (isAnimationLocked) {
+                petState.targetRotationY = stopped ? 0 : angle;
+                return;
+            }
+
+            if (isChatting) {
+                petState.targetRotationY = stopped ? 0 : angle;
+                return;
+            }
 
             if (currentBehaviorState === "dragging" || isDragging) {
                 petState.targetRotationY = stopped ? 0 : angle;
@@ -254,12 +292,69 @@ const win = /** @type {any} */ (window);
                 data.animation
             );
             console.log("Playing animation:", animationName);
+
+            if (typeof data.lock === "boolean") {
+                isAnimationLocked = data.lock;
+            }
+
+            const action = petState.actions[animationName];
+            if (action && typeof data.loop === "boolean") {
+                if (data.loop) {
+                    action.setLoop(THREE.LoopRepeat, Infinity);
+                    action.clampWhenFinished = false;
+                } else {
+                    action.setLoop(THREE.LoopOnce, 1);
+                    action.clampWhenFinished = true;
+                }
+            }
+
             petState.currentState = /** @type {AnimationState} */ (
                 crossFadeToAction(
                     petState.actions,
                     petState.currentState,
                     animationName,
                     data.duration,
+                )
+            );
+        });
+
+        win.electronAPI.onChatState((data) => {
+            isChatting = Boolean(data.speaking);
+            if (isAnimationLocked) {
+                return;
+            }
+            if (isChatting) {
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "idle",
+                        0.2,
+                    )
+                );
+                setChatOverlay(true);
+                return;
+            }
+
+            setChatOverlay(false);
+
+            if (currentBehaviorState === "dragging" || isDragging) {
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "swinging",
+                    )
+                );
+                return;
+            }
+
+            const nextState = lastMoveState.stopped ? "idle" : "walk";
+            petState.currentState = /** @type {AnimationState} */ (
+                crossFadeToAction(
+                    petState.actions,
+                    petState.currentState,
+                    nextState,
                 )
             );
         });
@@ -316,6 +411,9 @@ const win = /** @type {any} */ (window);
 
         win.electronAPI.onMusicIdlePlay(() => {
             isMusicPlaying = true;
+            if (isChatting || isAnimationLocked) {
+                return;
+            }
             petState.currentState = /** @type {AnimationState} */ (
                 crossFadeToAction(
                     petState.actions,
@@ -327,7 +425,12 @@ const win = /** @type {any} */ (window);
 
         win.electronAPI.onMusicIdleStop(() => {
             isMusicPlaying = false;
-            if (currentBehaviorState === "dragging" || isDragging) {
+            if (
+                currentBehaviorState === "dragging" ||
+                isDragging ||
+                isChatting ||
+                isAnimationLocked
+            ) {
                 return;
             }
             const nextState = lastMoveState.stopped ? "idle" : "walk";

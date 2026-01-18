@@ -14,6 +14,7 @@ const win = /** @type {any} */ (window);
 const currentStateEl = document.getElementById("currentState");
 const buttons = document.querySelectorAll("[data-state]");
 const quoteBtn = document.getElementById("quoteBtn");
+const interruptBtn = document.getElementById("interruptBtn");
 
 // Handle state button clicks
 buttons.forEach((btn) => {
@@ -29,6 +30,13 @@ buttons.forEach((btn) => {
 if (quoteBtn) {
     quoteBtn.addEventListener("click", () => {
         win.electronAPI.triggerQuote();
+    });
+}
+
+// Handle interrupt button click
+if (interruptBtn) {
+    interruptBtn.addEventListener("click", () => {
+        win.electronAPI.interruptAction();
     });
 }
 

@@ -195,6 +195,8 @@ async function streamElevenLabsAudio(text) {
         }
 
         // Play the audio
+        // play the chat animation
+        setSpeaking(true);
         await playAudioBuffer(combined.buffer);
         console.log("✅ ElevenLabs stream complete");
     } catch (error) {
@@ -372,6 +374,9 @@ function handleOpenAIEvent(event) {
             break;
 
         case "response.output_audio_transcript.delta":
+            if (!isSpeaking) {
+                setSpeaking(true);
+            }
             currentResponse += event.delta;
             if (responseDiv) {
                 responseDiv.textContent = currentResponse;
@@ -387,36 +392,51 @@ function handleOpenAIEvent(event) {
                     currentResponse.includes("{") &&
                     currentResponse.includes("}")
                 ) {
-                    // checks for pomodoro format { "pomodoro", 25}
-                    if (
-                        currentResponse.includes("pomodoro") &&
-                        currentResponse.includes(",")
-                    ) {
-                        const content = currentResponse.slice(1, -1);
-                        const [, durationStr] = content
-                            .split(",")
-                            .map((s) => s.trim());
-                        const duration = parseInt(durationStr, 10);
+                    const bracketText = currentResponse.slice(
+                        currentResponse.indexOf("{"),
+                        currentResponse.lastIndexOf("}") + 1,
+                    );
+                    const normalized = bracketText.toLowerCase();
+                    // checks for pomodoro timer format { "pomodoro timer" }
+                    if (normalized.includes("pomodoro timer")) {
+                        const duration = 30;
+                        sendTextMessage(
+                            `Starting a pomodoro timer for ${duration} minutes.`,
+                        );
+                        if (_window.api.sendToMain) {
+                            _window.api.sendToMain("start-pomodoro", {
+                                duration,
+                                mode: "pomodoro",
+                            });
+                        }
+                        setSpeaking(false);
+                        currentResponse = "";
+                        return;
+                    }
+
+                    // checks for timer format { "timer", 10 }
+                    if (normalized.includes("timer")) {
+                        const match = normalized.match(/\d+/);
+                        const duration = match ? parseInt(match[0], 10) : 10;
                         if (!isNaN(duration) && duration > 0) {
                             sendTextMessage(
-                                `Starting a pomodoro timer for ${duration} minutes.`,
+                                `Starting a timer for ${duration} minutes.`,
                             );
                             if (_window.api.sendToMain) {
                                 _window.api.sendToMain("start-pomodoro", {
                                     duration,
+                                    mode: "timer",
                                 });
                             }
                         } else {
-                            console.warn(
-                                "Invalid pomodoro duration:",
-                                durationStr,
-                            );
+                            console.warn("Invalid timer duration:", match?.[0]);
                         }
+                        setSpeaking(false);
                         currentResponse = "";
                         return;
                     }
                     // Extract bus stop code and bus number
-                    const content = currentResponse.slice(1, -1);
+                    const content = bracketText.slice(1, -1);
                     const [busStopCode, busNumber] = content
                         .split(",")
                         .map((s) => s.trim());
@@ -425,6 +445,7 @@ function handleOpenAIEvent(event) {
                         sendTextMessage(
                             `This is the program. The bus ${busNumber} at stop ${busStopCode} is arriving in ${timing}. Please send in your response to alert the user accordingly.`,
                         );
+                        setSpeaking(false);
                     });
                     // Request bus timing from main process
                 } else {

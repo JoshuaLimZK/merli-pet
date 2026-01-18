@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 /**
  * @typedef {Object} PomodoroAPI
- * @property {(callback: (duration: number) => void) => void} onStart
+ * @property {(callback: (data: { duration: number, mode?: string } | number) => void) => void} onStart
  */
 
 contextBridge.exposeInMainWorld("pomodoroAPI", {
@@ -12,7 +12,5 @@ contextBridge.exposeInMainWorld("pomodoroAPI", {
      * @param {(duration: number) => void} callback
      */
     onStart: (callback) =>
-        ipcRenderer.on("pomodoro-start", (_event, duration) =>
-            callback(duration),
-        ),
+        ipcRenderer.on("pomodoro-start", (_event, data) => callback(data)),
 });

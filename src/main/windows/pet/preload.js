@@ -53,6 +53,8 @@ const { contextBridge, ipcRenderer } = require("electron");
  * @typedef {Object} AnimationData
  * @property {string} animation - Animation name to play
  * @property {number} [duration] - Optional duration override
+ * @property {boolean} [loop] - Whether to loop the animation
+ * @property {boolean} [lock] - Whether to lock animation changes while active
  */
 
 /**
@@ -70,6 +72,10 @@ const { contextBridge, ipcRenderer } = require("electron");
  */
 
 /**
+ * @typedef {(data: { speaking: boolean }) => void} ChatStateCallback
+ */
+
+/**
  * @typedef {Object} ElectronAPI
  * @property {(callback: MouseMoveCallback) => void} onMouseMove
  * @property {(callback: BehaviorStateCallback) => void} onBehaviorStateChange
@@ -77,6 +83,7 @@ const { contextBridge, ipcRenderer } = require("electron");
  * @property {(callback: RotationCallback) => void} onSetRotation
  * @property {(callback: AnimationCallback) => void} onPlayAnimation
  * @property {(callback: ToggleAnimationCallback) => void} onToggleAnimation
+ * @property {(callback: ChatStateCallback) => void} onChatState
  * @property {(callback: (data: { enabled: boolean, width: number, height: number }) => void) => void} onStareMode
  * @property {() => Promise<PetConfig>} getPetConfig
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
@@ -98,6 +105,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
         ipcRenderer.on("play-animation", (_event, data) => callback(data)),
     onToggleAnimation: (/** @type {ToggleAnimationCallback} */ callback) =>
         ipcRenderer.on("toggle-animation", (_event, data) => callback(data)),
+    onChatState: (/** @type {ChatStateCallback} */ callback) =>
+        ipcRenderer.on("chat-state", (_event, data) => callback(data)),
     onStareMode: (
         /** @type {(data: { enabled: boolean, width: number, height: number }) => void} */ callback,
     ) => ipcRenderer.on("stare-mode", (_event, data) => callback(data)),

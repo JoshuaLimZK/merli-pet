@@ -132,6 +132,17 @@ function pushFlagPoleAnimation(flagPoleWindow, petWindow) {
                 petWindow.webContents.send("set-rotation", {
                     angle: Math.PI / 2,
                 });
+                petWindow.webContents.send("toggle-animation", {
+                    animation: "armsOut",
+                    enabled: false,
+                });
+                // play the flag raising animation (loop until finished)
+                petWindow.webContents.send("play-animation", {
+                    animation: "flagRaise",
+                    duration: 0.2,
+                    loop: true,
+                    lock: true,
+                });
                 setTimeout(() => {
                     flagPoleWindow.webContents.send("begin-flag-raising");
                 }, 100);
@@ -139,10 +150,10 @@ function pushFlagPoleAnimation(flagPoleWindow, petWindow) {
                 // Listen for end of flag raising to clean up and restart
                 ipcMain.once("ended-flag-raising", () => {
                     console.log("Flag raising ended, cleaning up");
-                    // Disable armsOut animation
-                    petWindow.webContents.send("toggle-animation", {
-                        animation: "armsOut",
-                        enabled: false,
+                    petWindow.webContents.send("play-animation", {
+                        animation: "idle",
+                        duration: 0.2,
+                        lock: false,
                     });
                     // Close the flagpole window
                     if (!flagPoleWindow.isDestroyed()) {

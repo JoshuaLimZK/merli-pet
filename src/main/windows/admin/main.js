@@ -29,6 +29,7 @@ export function createAdminWindow() {
         titleBarStyle: "hidden",
         transparent: true,
         movable: true,
+        alwaysOnTop: true,
         title: "Admin",
         webPreferences: {
             contextIsolation: true,
