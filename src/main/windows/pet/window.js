@@ -75,10 +75,6 @@ function createPetWindow(isDevelopment) {
         path.join(__dirname, "../../../renderer/pet/index.html"),
     );
 
-    if (isDevelopment) {
-        petWindow.webContents.openDevTools({ mode: "detach" });
-    }
-
     petWindow.webContents.on("did-finish-load", () => {
         transitionToState("follow");
     });

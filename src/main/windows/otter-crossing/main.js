@@ -128,8 +128,5 @@ function createOtterCrossingWindow() {
         path.join(__dirname, "../../../renderer/otter-crossing/index.html"),
     );
 
-    // Uncomment for debugging
-    // otterCrossingWindow.webContents.openDevTools({ mode: "detach" });
-
     return otterCrossingWindow;
 }

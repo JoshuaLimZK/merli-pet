@@ -50,10 +50,6 @@ export function createMicWindow(isDevelopment) {
         path.join(__dirname, "../../../renderer/mic/index.html"),
     );
 
-    if (isDevelopment) {
-        micWindow.webContents.openDevTools({ mode: "detach" });
-    }
-
     micWindow.on("closed", () => {
         micWindow = null;
     });

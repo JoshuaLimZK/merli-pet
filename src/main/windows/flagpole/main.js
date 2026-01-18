@@ -210,7 +210,5 @@ function createFlagPoleWindow(bounds) {
         flagPoleWindow.show();
     });
 
-    flagPoleWindow.webContents.openDevTools({ mode: "detach" });
-
     return flagPoleWindow;
 }

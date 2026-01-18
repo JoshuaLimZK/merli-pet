@@ -449,7 +449,6 @@ function handleOpenAIEvent(event) {
                     });
                     // Request bus timing from main process
                 } else {
-                    streamElevenLabsAudio(currentResponse);
                     // Show the response text in a quote bubble
                     // Estimate duration: ~80ms per character for TTS speech + 1s buffer
                     const estimatedDuration = Math.max(
@@ -457,17 +456,13 @@ function handleOpenAIEvent(event) {
                         currentResponse.length * 80 + 1000,
                     );
                     if (_window.api.sendToMain) {
-                        if (!isSpeaking) {
-                            _window.api.sendToMain("show-quote", {
-                                text: currentResponse,
-                                duration: estimatedDuration,
-                            });
-                        } else {
-                            console.log(
-                                "🗣️ Skipping quote because pet is speaking",
-                            );
-                        }
+                        _window.api.sendToMain("show-quote", {
+                            text: currentResponse,
+                            duration: estimatedDuration,
+                        });
                     }
+                    // Start TTS audio after showing quote
+                    streamElevenLabsAudio(currentResponse);
                 }
             }
             currentResponse = "";

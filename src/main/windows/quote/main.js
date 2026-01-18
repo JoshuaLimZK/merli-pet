@@ -29,6 +29,7 @@ function createQuoteWindow(petWindow) {
         transparent: true,
         movable: false,
         alwaysOnTop: true,
+        show: false,
         title: "quote-window",
         x: petWindow.getBounds().x, // + petWindow.getBounds().width,
         y: petWindow.getBounds().y, // + petWindow.getBounds().height,

@@ -355,7 +355,7 @@ ipcMain.on("start-pomodoro", (_event, { duration, mode }) => {
 // Show quote from mic renderer (AI response)
 ipcMain.on("show-quote", (_event, { text, duration }) => {
     console.log("Showing quote from mic:", text, "duration:", duration);
-    sendRandomQuote(text, duration);
+    sendRandomQuote(text, duration, true); // forceShow=true for AI responses
 });
 
 /** @type {string[]} */
@@ -386,10 +386,11 @@ const quotes = [
  * Sends a random quote to the renderer process via a quote window
  * @param {string | null} [quote=null] - Optional specific quote to display, otherwise picks randomly
  * @param {number} [duration=5000] - Duration to display the quote in milliseconds
+ * @param {boolean} [forceShow=false] - If true, show quote even if pet is speaking (for AI responses)
  * @returns {void}
  */
-function sendRandomQuote(quote = null, duration = 5000) {
-    if (isPetSpeaking) {
+function sendRandomQuote(quote = null, duration = 5000, forceShow = false) {
+    if (isPetSpeaking && !forceShow) {
         console.log("Skipping quote because pet is speaking");
         return;
     }
@@ -405,6 +406,7 @@ function sendRandomQuote(quote = null, duration = 5000) {
     console.log("Sending quote:", randomQuote);
     quoteW.on("ready-to-show", () => {
         quoteW.webContents.send("random-quote", randomQuote);
+        quoteW.show();
     });
 
     // Store original size to prevent drift
