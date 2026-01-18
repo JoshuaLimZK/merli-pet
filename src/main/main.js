@@ -41,6 +41,7 @@ import {
     interruptOtterCrossing,
 } from "./windows/otter-crossing/main.js";
 import { petMoveTo } from "./movement/main.js";
+import * as pomodoroWindow from "./windows/pomodoro/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -333,6 +334,16 @@ ipcMain.on("pet-speaking", (_event, { speaking }) => {
     isPetSpeaking = Boolean(speaking);
 });
 
+// Start pomodoro timer window
+ipcMain.on("start-pomodoro", (_event, { duration }) => {
+    const minutes = Number(duration);
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+        console.warn("Invalid pomodoro duration:", duration);
+        return;
+    }
+    pomodoroWindow.createPomodoroWindow(minutes);
+});
+
 // Show quote from mic renderer (AI response)
 ipcMain.on("show-quote", (_event, { text, duration }) => {
     console.log("Showing quote from mic:", text, "duration:", duration);
@@ -480,7 +491,7 @@ function musicCheckMac() {
             return "paused"
         end if
     end tell
-  `;
+    `;
     return new Promise((resolve) => {
         exec(`osascript -e '${script}'`, (error, stdout, stderr) => {
             if (error) {
@@ -494,6 +505,25 @@ function musicCheckMac() {
             resolve(stdout.trim() === "playing");
         });
     });
+}
+
+import util from "util";
+const execPromise = util.promisify(exec);
+
+async function musicCheckWindows() {
+    try {
+        const { stdout } = await execPromise(
+            `powershell -command "Get-Process -Name Spotify -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | Select-Object -ExpandProperty MainWindowTitle"`,
+        );
+        const title = stdout.trim();
+        console.log(title);
+        // When Spotify is playing, the window title shows "Artist - Song"
+        // When paused or not playing, it shows "Spotify" or is empty
+        return !title.includes("Spotify");
+    } catch (error) {
+        console.error(`Error checking Spotify state: ${error.message}`);
+        return false;
+    }
 }
 
 // ======================
@@ -603,6 +633,21 @@ function startPetUpdateLoop() {
                                     }
                                 });
                             }, 1000);
+                        } else if (process.platform === "win32") {
+                            idleMusicInterval = setInterval(() => {
+                                musicCheckWindows().then((musicPlaying) => {
+                                    console.log("Music playing:", musicPlaying);
+                                    if (musicPlaying) {
+                                        petWindow.webContents.send(
+                                            "play-idle-music",
+                                        );
+                                    } else {
+                                        petWindow.webContents.send(
+                                            "stop-idle-music",
+                                        );
+                                    }
+                                });
+                            }, 1000);
                         }
                     }
                     newIdleState = false;
@@ -648,7 +693,8 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
         screen.getPrimaryDisplay().workAreaSize.width -
         Math.floor(
             Math.random() * (screen.getPrimaryDisplay().workAreaSize.width / 2),
-        );
+        ) -
+        400;
     const targetY = Math.floor(
         Math.random() * screen.getPrimaryDisplay().workAreaSize.height,
     );
