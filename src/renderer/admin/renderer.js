@@ -5,7 +5,6 @@
  * @property {(state: string) => void} setState
  * @property {(callback: (state: string) => void) => void} onStateChange
  * @property {() => void} triggerQuote
- * @property {() => void} interruptAction
  */
 
 /** @type {Window & { electronAPI: AdminAPI }} */
@@ -30,14 +29,6 @@ buttons.forEach((btn) => {
 if (quoteBtn) {
     quoteBtn.addEventListener("click", () => {
         win.electronAPI.triggerQuote();
-    });
-}
-
-// Handle interrupt button click
-const interruptBtn = document.getElementById("interruptBtn");
-if (interruptBtn) {
-    interruptBtn.addEventListener("click", () => {
-        win.electronAPI.interruptAction();
     });
 }
 
