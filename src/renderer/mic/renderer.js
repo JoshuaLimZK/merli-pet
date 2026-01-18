@@ -421,9 +421,9 @@ function handleOpenAIEvent(event) {
                         .split(",")
                         .map((s) => s.trim());
                     getBusTiming(busStopCode, busNumber).then((timing) => {
-                        console.log("busTimingIs");
+                        console.log("busTimingIs ", timing);
                         sendTextMessage(
-                            `The bus ${busNumber} at stop ${busStopCode} is arriving in ${timing}.`,
+                            `This is the program. The bus ${busNumber} at stop ${busStopCode} is arriving in ${timing}. Please send in your response to alert the user accordingly.`,
                         );
                     });
                     // Request bus timing from main process
@@ -906,6 +906,12 @@ function getBusStopCode() {
     return fetch("../../assets/bus_stops.json").then((res) => res.json());
 }
 
+/**
+ * Get bus arrival timing for a specific bus stop and service number
+ * @param {string} busStop - The bus stop code
+ * @param {string} busNumber - The bus service number
+ * @returns {Promise<string>} Arrival timing in minutes or status message
+ */
 async function getBusTiming(busStop, busNumber) {
     const response = await fetch(
         `https://datamall2.mytransport.sg/ltaodataservice/v3/BusArrival?BusStopCode=${busStop}&ServiceNo=${busNumber}`,
@@ -923,8 +929,13 @@ async function getBusTiming(busStop, busNumber) {
         return "No Arrival Info";
     }
 
-    const minutes =
-        Math.ceil((Date.parse(estimatedArrival) - Date.now()) / 60000) +
-        " Mins";
-    return minutes;
+    const minutes = Math.floor(
+        (Date.parse(estimatedArrival) - Date.now()) / 60000,
+    );
+
+    if (minutes <= 0) {
+        return "Arriving";
+    }
+
+    return minutes + " Mins";
 }

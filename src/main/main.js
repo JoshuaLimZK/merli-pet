@@ -659,7 +659,8 @@ function dragInRandomImage(petWindow, imageDragWindow, mainLoop) {
         screen.getPrimaryDisplay().workAreaSize.width -
         Math.floor(
             Math.random() * (screen.getPrimaryDisplay().workAreaSize.width / 2),
-        );
+        ) -
+        400;
     const targetY = Math.floor(
         Math.random() * screen.getPrimaryDisplay().workAreaSize.height,
     );
