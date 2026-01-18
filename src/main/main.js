@@ -33,6 +33,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import { createAdminWindow } from "./windows/admin/main.js";
 import { flagPoleAnimation } from "./windows/flagpole/main.js";
+import { otterCrossingAnimation } from "./windows/otter-crossing/main.js";
 import { petMoveTo } from "./movement/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
@@ -130,6 +131,12 @@ ipcMain.on("admin-set-state", (_event, state) => {
         if (petWindow) {
             transitionToState("flagPole", false, Infinity);
             flagPoleAnimation(petWindow);
+        }
+    } else if (state === "otterCrossing") {
+        const petWindow = getPetWindow();
+        if (petWindow) {
+            transitionToState("otterCrossing", false, Infinity);
+            otterCrossingAnimation(petWindow);
         }
     } else if (state === "getBusTimings") {
         transitionToState("getBusTimings", false, 2000);

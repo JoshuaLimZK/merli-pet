@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Otter Crossing</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                background: transparent;
+                overflow: hidden;
+                width: 100vw;
+                height: 100vh;
+            }
+            .crossing-container {
+                position: relative;
+                width: 100%;
+                height: 100%;
+            }
+            .otter {
+                position: absolute;
+                pointer-events: none;
+                animation: waddle 0.4s ease-in-out infinite;
+                transform-origin: bottom center;
+            }
+            @keyframes waddle {
+                0% {
+                    transform: rotate(-8deg) translateY(0) scaleY(1);
+                }
+                25% {
+                    transform: rotate(0deg) translateY(-5px) scaleY(0.95);
+                }
+                50% {
+                    transform: rotate(8deg) translateY(0) scaleY(1);
+                }
+                75% {
+                    transform: rotate(0deg) translateY(-5px) scaleY(0.95);
+                }
+                100% {
+                    transform: rotate(-8deg) translateY(0) scaleY(1);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="crossing-container" id="container"></div>
+        <script src="renderer.js"></script>
+    </body>
+</html>
