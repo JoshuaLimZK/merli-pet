@@ -41,6 +41,7 @@ import {
     interruptOtterCrossing,
 } from "./windows/otter-crossing/main.js";
 import { petMoveTo } from "./movement/main.js";
+import * as pomodoroWindow from "./windows/pomodoro/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
 const __filename = fileURLToPath(import.meta.url);
@@ -331,6 +332,16 @@ ipcMain.on("interrupt-special-action", () => {
 // Track whether the pet is currently speaking
 ipcMain.on("pet-speaking", (_event, { speaking }) => {
     isPetSpeaking = Boolean(speaking);
+});
+
+// Start pomodoro timer window
+ipcMain.on("start-pomodoro", (_event, { duration }) => {
+    const minutes = Number(duration);
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+        console.warn("Invalid pomodoro duration:", duration);
+        return;
+    }
+    pomodoroWindow.createPomodoroWindow(minutes);
 });
 
 // Show quote from mic renderer (AI response)
