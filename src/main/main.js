@@ -127,6 +127,62 @@ ipcMain.on("set-ignore-mouse-events", (_event, ignore) => {
     }
 });
 
+// ======================
+// Drag Handling
+// ======================
+/** @type {{ x: number, y: number } | null} */
+let dragOffset = null;
+/** @type {NodeJS.Timeout | null} */
+let dragUpdateInterval = null;
+
+// Start dragging the pet
+ipcMain.on("start-drag", (_event, offset) => {
+    console.log("Started dragging pet with offset:", offset);
+    dragOffset = offset;
+
+    // Transition to dragging state
+    transitionToState("dragging", true, Infinity);
+
+    const petWindow = getPetWindow();
+    if (!petWindow) return;
+
+    // Start following the mouse
+    dragUpdateInterval = setInterval(() => {
+        if (!dragOffset) return;
+
+        const mousePos = screen.getCursorScreenPoint();
+        const newX = mousePos.x + dragOffset.x - PET_WINDOW.SIZE / 2;
+        const newY = mousePos.y + dragOffset.y - PET_WINDOW.SIZE / 2;
+
+        petWindow.setBounds({
+            x: Math.round(newX),
+            y: Math.round(newY),
+            width: PET_WINDOW.SIZE,
+            height: PET_WINDOW.SIZE,
+        });
+
+        // Update internal position tracking
+        setPetPosition(
+            Math.round(newX + PET_WINDOW.SIZE / 2),
+            Math.round(newY + PET_WINDOW.SIZE / 2),
+        );
+    }, 16); // ~60fps
+});
+
+// Stop dragging the pet
+ipcMain.on("stop-drag", () => {
+    console.log("Stopped dragging pet");
+
+    if (dragUpdateInterval) {
+        clearInterval(dragUpdateInterval);
+        dragUpdateInterval = null;
+    }
+    dragOffset = null;
+
+    // Return to idle state
+    transitionToState("idle", false, 3000);
+});
+
 /** @type {BrowserWindow | null} */
 let adminWindow = null;
 

@@ -198,6 +198,18 @@ const win = /** @type {any} */ (window);
         win.electronAPI.onBehaviorStateChange((data) => {
             currentBehaviorState = data.state;
             console.log("Behavior state changed to:", currentBehaviorState);
+
+            // Play appropriate animation for certain states
+            if (currentBehaviorState === "dragging") {
+                // Play float animation when being dragged
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "float",
+                    )
+                );
+            }
         });
 
         // Handle rotation-only updates (no animation change)
