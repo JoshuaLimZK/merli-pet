@@ -77,6 +77,7 @@ const { contextBridge, ipcRenderer } = require("electron");
  * @property {(callback: RotationCallback) => void} onSetRotation
  * @property {(callback: AnimationCallback) => void} onPlayAnimation
  * @property {(callback: ToggleAnimationCallback) => void} onToggleAnimation
+ * @property {(callback: (data: { enabled: boolean, width: number, height: number }) => void) => void} onStareMode
  * @property {() => Promise<PetConfig>} getPetConfig
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: DragOffset) => void} startDrag
@@ -97,6 +98,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
         ipcRenderer.on("play-animation", (_event, data) => callback(data)),
     onToggleAnimation: (/** @type {ToggleAnimationCallback} */ callback) =>
         ipcRenderer.on("toggle-animation", (_event, data) => callback(data)),
+    onStareMode: (
+        /** @type {(data: { enabled: boolean, width: number, height: number }) => void} */ callback,
+    ) => ipcRenderer.on("stare-mode", (_event, data) => callback(data)),
     onMusicIdlePlay: (/** @type {() => void} */ callback) =>
         ipcRenderer.on("play-idle-music", () => callback()),
     onMusicIdleStop: (/** @type {() => void} */ callback) =>

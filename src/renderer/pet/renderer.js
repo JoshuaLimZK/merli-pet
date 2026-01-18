@@ -18,6 +18,7 @@ import { crossFadeToAction, lerpRotation } from "./animation.js";
  * @property {(callback: (data: { angle: number }) => void) => void} onSetRotation
  * @property {(callback: (data: { animation: string, duration?: number }) => void) => void} onPlayAnimation
  * @property {(callback: (data: { animation: string, enabled: boolean }) => void) => void} onToggleAnimation
+ * @property {(callback: (data: { enabled: boolean, width: number, height: number }) => void) => void} onStareMode
  * @property {(callback: () => void) => void} onMusicIdlePlay
  * @property {(callback: () => void) => void} onMusicIdleStop
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
@@ -246,6 +247,40 @@ const win = /** @type {any} */ (window);
                 action.play();
             } else {
                 action.fadeOut(0.3);
+            }
+        });
+
+        // Handle stare mode easter egg - zoom camera close to face
+        win.electronAPI.onStareMode((data) => {
+            console.log("Stare mode:", data.enabled);
+
+            if (data.enabled) {
+                // Resize renderer to full screen
+                threeRenderer.setSize(data.width, data.height);
+                camera.aspect = data.width / data.height;
+                camera.fov = 27; // Narrow FOV for intense zoom effect
+                camera.updateProjectionMatrix();
+
+                // Zoom camera super close to face
+                camera.position.z = 1.1; // Very close
+                camera.position.y = 0.2; // Look at face level
+
+                // Face the camera (rotation 0)
+                petState.targetRotationY = 0;
+                petState.currentRotationY = 0;
+                if (petState.model) {
+                    petState.model.rotation.y = 0;
+                }
+            } else {
+                // Restore renderer size
+                threeRenderer.setSize(data.width, data.height);
+                camera.aspect = 1;
+                camera.fov = CAMERA_CONFIG.FOV; // Restore original FOV
+                camera.updateProjectionMatrix();
+
+                // Restore camera position
+                camera.position.z = CAMERA_CONFIG.POSITION_Z;
+                camera.position.y = CAMERA_CONFIG.POSITION_Y;
             }
         });
 
