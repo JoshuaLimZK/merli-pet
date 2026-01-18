@@ -78,6 +78,8 @@ async function checkWallpaperAvailable() {
 // ======================
 /** @type {BrowserWindow | null} */
 let micWindow = null;
+/** @type {boolean} */
+let isPetSpeaking = false;
 
 // ======================
 // Push-to-Talk Setup
@@ -326,6 +328,11 @@ ipcMain.on("interrupt-special-action", () => {
     interruptOtterCrossing();
 });
 
+// Track whether the pet is currently speaking
+ipcMain.on("pet-speaking", (_event, { speaking }) => {
+    isPetSpeaking = Boolean(speaking);
+});
+
 // Show quote from mic renderer (AI response)
 ipcMain.on("show-quote", (_event, { text, duration }) => {
     console.log("Showing quote from mic:", text, "duration:", duration);
@@ -363,6 +370,10 @@ const quotes = [
  * @returns {void}
  */
 function sendRandomQuote(quote = null, duration = 5000) {
+    if (isPetSpeaking) {
+        console.log("Skipping quote because pet is speaking");
+        return;
+    }
     let petWindow = getPetWindow();
     if (!petWindow) return;
     let quoteW = quoteWindow.createQuoteWindow(petWindow);
