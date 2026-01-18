@@ -387,6 +387,34 @@ function handleOpenAIEvent(event) {
                     currentResponse.includes("{") &&
                     currentResponse.includes("}")
                 ) {
+                    // checks for pomodoro format { "pomodoro", 25}
+                    if (
+                        currentResponse.includes("pomodoro") &&
+                        currentResponse.includes(",")
+                    ) {
+                        const content = currentResponse.slice(1, -1);
+                        const [, durationStr] = content
+                            .split(",")
+                            .map((s) => s.trim());
+                        const duration = parseInt(durationStr, 10);
+                        if (!isNaN(duration) && duration > 0) {
+                            sendTextMessage(
+                                `Starting a pomodoro timer for ${duration} minutes.`,
+                            );
+                            if (_window.api.sendToMain) {
+                                _window.api.sendToMain("start-pomodoro", {
+                                    duration,
+                                });
+                            }
+                        } else {
+                            console.warn(
+                                "Invalid pomodoro duration:",
+                                durationStr,
+                            );
+                        }
+                        currentResponse = "";
+                        return;
+                    }
                     // Extract bus stop code and bus number
                     const content = currentResponse.slice(1, -1);
                     const [busStopCode, busNumber] = content
