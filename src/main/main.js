@@ -32,7 +32,14 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 import { createAdminWindow } from "./windows/admin/main.js";
-import { flagPoleAnimation } from "./windows/flagpole/main.js";
+import {
+    flagPoleAnimation,
+    interruptFlagPole,
+} from "./windows/flagpole/main.js";
+import {
+    otterCrossingAnimation,
+    interruptOtterCrossing,
+} from "./windows/otter-crossing/main.js";
 import { petMoveTo } from "./movement/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
@@ -112,6 +119,70 @@ ipcMain.handle("get-pet-config", () => {
     return PET_WINDOW;
 });
 
+// Handle mouse events ignore toggle from pet renderer
+ipcMain.on("set-ignore-mouse-events", (_event, ignore) => {
+    const petWindow = getPetWindow();
+    if (petWindow) {
+        petWindow.setIgnoreMouseEvents(ignore, { forward: true });
+    }
+});
+
+// ======================
+// Drag Handling
+// ======================
+/** @type {{ x: number, y: number } | null} */
+let dragOffset = null;
+/** @type {NodeJS.Timeout | null} */
+let dragUpdateInterval = null;
+
+// Start dragging the pet
+ipcMain.on("start-drag", (_event, offset) => {
+    console.log("Started dragging pet with offset:", offset);
+    dragOffset = offset;
+
+    // Transition to dragging state
+    transitionToState("dragging", true, Infinity);
+
+    const petWindow = getPetWindow();
+    if (!petWindow) return;
+
+    // Start following the mouse
+    dragUpdateInterval = setInterval(() => {
+        if (!dragOffset) return;
+
+        const mousePos = screen.getCursorScreenPoint();
+        const newX = mousePos.x + dragOffset.x - PET_WINDOW.SIZE / 2;
+        const newY = mousePos.y + dragOffset.y - PET_WINDOW.SIZE / 2;
+
+        petWindow.setBounds({
+            x: Math.round(newX),
+            y: Math.round(newY),
+            width: PET_WINDOW.SIZE,
+            height: PET_WINDOW.SIZE,
+        });
+
+        // Update internal position tracking
+        setPetPosition(
+            Math.round(newX + PET_WINDOW.SIZE / 2),
+            Math.round(newY + PET_WINDOW.SIZE / 2),
+        );
+    }, 16); // ~60fps
+});
+
+// Stop dragging the pet
+ipcMain.on("stop-drag", () => {
+    console.log("Stopped dragging pet");
+
+    if (dragUpdateInterval) {
+        clearInterval(dragUpdateInterval);
+        dragUpdateInterval = null;
+    }
+    dragOffset = null;
+
+    // Return to idle state
+    transitionToState("idle", false, 3000);
+});
+
 /** @type {BrowserWindow | null} */
 let adminWindow = null;
 
@@ -131,6 +202,12 @@ ipcMain.on("admin-set-state", (_event, state) => {
             transitionToState("flagPole", false, Infinity);
             flagPoleAnimation(petWindow);
         }
+    } else if (state === "otterCrossing") {
+        const petWindow = getPetWindow();
+        if (petWindow) {
+            transitionToState("otterCrossing", false, Infinity);
+            otterCrossingAnimation(petWindow);
+        }
     } else if (state === "getBusTimings") {
         transitionToState("getBusTimings", false, 2000);
     } else {
@@ -147,6 +224,19 @@ ipcMain.on("admin-set-state", (_event, state) => {
 ipcMain.on("admin-trigger-quote", () => {
     console.log("Admin triggered random quote");
     sendRandomQuote();
+});
+
+// Pet clicked handler
+ipcMain.on("pet-clicked", (_event, region) => {
+    console.log("Pet clicked:", region);
+    // TODO: Add click handling logic here
+});
+
+// Interrupt special actions handler
+ipcMain.on("interrupt-special-action", () => {
+    console.log("Interrupting special actions");
+    interruptFlagPole();
+    interruptOtterCrossing();
 });
 
 // Show quote from mic renderer (AI response)
@@ -202,7 +292,7 @@ function sendRandomQuote(quote = null, duration = 5000) {
 
     // Store original size to prevent drift
     const quoteWidth = 300;
-    const quoteHeight = 100;
+    const quoteHeight = 300;
 
     let interval = setInterval(
         () => {

@@ -198,6 +198,18 @@ const win = /** @type {any} */ (window);
         win.electronAPI.onBehaviorStateChange((data) => {
             currentBehaviorState = data.state;
             console.log("Behavior state changed to:", currentBehaviorState);
+
+            // Play appropriate animation for certain states
+            if (currentBehaviorState === "dragging") {
+                // Play float animation when being dragged
+                petState.currentState = /** @type {AnimationState} */ (
+                    crossFadeToAction(
+                        petState.actions,
+                        petState.currentState,
+                        "float",
+                    )
+                );
+            }
         });
 
         // Handle rotation-only updates (no animation change)
@@ -452,13 +464,12 @@ const win = /** @type {any} */ (window);
             object: hitObject.name,
         });
 
-        // TODO: Add your click handling logic here
-        // Example:
-        // if (verticalRegion === "top") {
-        //     // Pet was clicked on head - play happy animation
-        // } else if (verticalRegion === "bottom") {
-        //     // Pet was clicked on feet - play jump animation
-        // }
+        // Send click data to main process
+        win.electronAPI.petClicked({
+            vertical: verticalRegion,
+            horizontal: horizontalRegion,
+            depth: depthRegion,
+        });
     });
 
     // ============================================================================
