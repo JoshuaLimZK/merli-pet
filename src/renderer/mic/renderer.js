@@ -218,6 +218,22 @@ async function initializeOpenAI() {
         throw new Error("No OpenAI API key provided");
     }
 
+    // Read instruction file BEFORE creating WebSocket
+    let instructions =
+        "You are a helpful assistant named Merli. Please speak in english. If the user asks for anything related to bus timings, attempt to prompt for bus stop description";
+    try {
+        const instructionResponse = await fetch("merli-agent-instructions.txt");
+        if (instructionResponse.ok) {
+            instructions = await instructionResponse.text();
+            console.log("📄 Loaded instructions from file");
+        }
+    } catch (error) {
+        console.warn(
+            "⚠️ Could not load instructions file, using default instructions:",
+            error,
+        );
+    }
+
     return new Promise((resolve, reject) => {
         const uri = `wss://api.openai.com/v1/realtime?model=gpt-realtime`;
         const protocols = [
@@ -243,8 +259,7 @@ async function initializeOpenAI() {
                     session: {
                         type: "realtime",
                         output_modalities: ["audio"],
-                        instructions:
-                            "You are a helpful assistant named Merli. Please speak in english. You may have a normal conversation with the user unless the user asks for anything related to bus timings, attempt to prompt for bus stop code and bus number. Once these information is provided, give them in the format '{<bus stop code>, <bus number>}' back as a response ONLY which will be intercepted and processed. ADD NOT ADDTIONAL TEXT IN THE FORMAT RESPONSE FOR PROCESSING PURPOSES. You should not in any other case use curly braces as a response. The estimated time of arrival will be provided which you will relay to the user.",
+                        instructions,
                         audio: {
                             input: {
                                 format: {
