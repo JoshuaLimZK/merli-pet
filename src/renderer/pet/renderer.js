@@ -452,13 +452,12 @@ const win = /** @type {any} */ (window);
             object: hitObject.name,
         });
 
-        // TODO: Add your click handling logic here
-        // Example:
-        // if (verticalRegion === "top") {
-        //     // Pet was clicked on head - play happy animation
-        // } else if (verticalRegion === "bottom") {
-        //     // Pet was clicked on feet - play jump animation
-        // }
+        // Send click data to main process
+        win.electronAPI.petClicked({
+            vertical: verticalRegion,
+            horizontal: horizontalRegion,
+            depth: depthRegion,
+        });
     });
 
     // ============================================================================

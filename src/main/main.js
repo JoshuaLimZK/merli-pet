@@ -113,6 +113,14 @@ ipcMain.handle("get-pet-config", () => {
     return PET_WINDOW;
 });
 
+// Handle mouse events ignore toggle from pet renderer
+ipcMain.on("set-ignore-mouse-events", (_event, ignore) => {
+    const petWindow = getPetWindow();
+    if (petWindow) {
+        petWindow.setIgnoreMouseEvents(ignore, { forward: true });
+    }
+});
+
 /** @type {BrowserWindow | null} */
 let adminWindow = null;
 
@@ -154,6 +162,13 @@ ipcMain.on("admin-set-state", (_event, state) => {
 ipcMain.on("admin-trigger-quote", () => {
     console.log("Admin triggered random quote");
     sendRandomQuote();
+});
+
+// Pet clicked handler
+ipcMain.on("pet-clicked", (_event, region) => {
+    console.log("Pet clicked:", region);
+    // TODO: Add click handling logic here
+    // Example: trigger animations, quotes, or actions based on region
 });
 
 // Show quote from mic renderer (AI response)

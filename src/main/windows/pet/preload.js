@@ -81,6 +81,7 @@ const { contextBridge, ipcRenderer } = require("electron");
  * @property {(ignore: boolean) => void} setIgnoreMouseEvents
  * @property {(offset: DragOffset) => void} startDrag
  * @property {() => void} stopDrag
+ * @property {(region: { vertical: string, horizontal: string, depth: string }) => void} petClicked
  */
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -108,4 +109,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     startDrag: (/** @type {DragOffset} */ offset) =>
         ipcRenderer.send("start-drag", offset),
     stopDrag: () => ipcRenderer.send("stop-drag"),
+    petClicked: (
+        /** @type {{ vertical: string, horizontal: string, depth: string }} */ region,
+    ) => ipcRenderer.send("pet-clicked", region),
 });
