@@ -21,24 +21,24 @@ let activeOtterWindow = null;
  */
 export function interruptOtterCrossing() {
     console.log("Interrupting otter crossing animation");
-    
+
     // Clear any active movement interval
     if (activeMovingInterval) {
         clearInterval(activeMovingInterval);
         activeMovingInterval = null;
     }
-    
+
     // Remove the IPC listener
     ipcMain.removeAllListeners("ended-otter-crossing");
-    
+
     // Close the otter crossing window
     if (activeOtterWindow && !activeOtterWindow.isDestroyed()) {
         activeOtterWindow.close();
     }
-    
+
     // Reset state
     activeOtterWindow = null;
-    
+
     // Return to idle
     transitionToState("idle", false, 1000);
 }
@@ -75,7 +75,7 @@ function startOtterCrossing(petWindow) {
 
     // Create the otter crossing window
     const otterCrossingWindow = createOtterCrossingWindow();
-    
+
     // Store for interruption
     activeOtterWindow = otterCrossingWindow;
 

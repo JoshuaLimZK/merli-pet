@@ -28,16 +28,16 @@ let activePetWindow = null;
  */
 export function interruptFlagPole() {
     console.log("Interrupting flagpole animation");
-    
+
     // Clear any active movement interval
     if (activeMovingInterval) {
         clearInterval(activeMovingInterval);
         activeMovingInterval = null;
     }
-    
+
     // Remove the IPC listener
     ipcMain.removeAllListeners("ended-flag-raising");
-    
+
     // Disable armsOut animation on pet
     if (activePetWindow && !activePetWindow.isDestroyed()) {
         activePetWindow.webContents.send("toggle-animation", {
@@ -45,16 +45,16 @@ export function interruptFlagPole() {
             enabled: false,
         });
     }
-    
+
     // Close the flagpole window
     if (activeFlagPoleWindow && !activeFlagPoleWindow.isDestroyed()) {
         activeFlagPoleWindow.close();
     }
-    
+
     // Reset state
     activeFlagPoleWindow = null;
     activePetWindow = null;
-    
+
     // Return to idle
     transitionToState("idle", false, 1000);
 }
@@ -66,7 +66,7 @@ export function interruptFlagPole() {
 export function flagPoleAnimation(petWindow) {
     // Store pet window for interruption
     activePetWindow = petWindow;
-    
+
     // Move to the bottom left
     const screenHeight = screen.getPrimaryDisplay().workAreaSize.height;
     const targetX = 0 + PET_WINDOW.SIZE / 2 + 90;

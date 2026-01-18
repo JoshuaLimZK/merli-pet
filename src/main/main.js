@@ -32,8 +32,14 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 import { createAdminWindow } from "./windows/admin/main.js";
-import { flagPoleAnimation, interruptFlagPole } from "./windows/flagpole/main.js";
-import { otterCrossingAnimation, interruptOtterCrossing } from "./windows/otter-crossing/main.js";
+import {
+    flagPoleAnimation,
+    interruptFlagPole,
+} from "./windows/flagpole/main.js";
+import {
+    otterCrossingAnimation,
+    interruptOtterCrossing,
+} from "./windows/otter-crossing/main.js";
 import { petMoveTo } from "./movement/main.js";
 
 // @ts-expect-error - ESM does not provide __dirname; create it from import.meta.url
