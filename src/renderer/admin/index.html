@@ -14,24 +14,37 @@
                 font-family:
                     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                     sans-serif;
-                background: #1a1a2e;
-                color: #eee;
+                background: #fdfdfd00;
+                color: #024574;
                 padding: 20px;
             }
             h1 {
                 font-size: 1.5rem;
                 margin-bottom: 20px;
-                color: #fff;
+                color: #024574;
+                border-radius: 15px;
+                background-color: #fdfdfd;
+            }
+            /* Draggable titlebar area for frameless window */
+            .titlebar {
+                -webkit-app-region: drag;
+                padding: 8px 0 12px 0;
+            }
+            /* Make interactive elements non-draggable so clicks work */
+            .no-drag,
+            .btn {
+                -webkit-app-region: no-drag;
             }
             h2 {
                 font-size: 1rem;
                 margin-bottom: 12px;
-                color: #888;
+                color: #479bbc;
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }
             .section {
-                background: #16213e;
+                background: #fdfdfd;
+                border: 3px solid #16213e;
                 border-radius: 8px;
                 padding: 16px;
                 margin-bottom: 16px;
@@ -48,6 +61,7 @@
                 font-size: 0.9rem;
                 font-weight: 500;
                 cursor: pointer;
+                text-align: start;
                 transition: all 0.2s;
             }
             .btn:hover {
@@ -107,42 +121,43 @@
         </style>
     </head>
     <body>
-        <h1>🐦 Merli Admin</h1>
 
         <div class="section">
+            <div class="titlebar">
+                <h1>Merli Admin</h1>
+            </div>
             <h2>Behavior States</h2>
             <div class="button-grid">
-                <button class="btn btn-idle" data-state="idle">😴 Idle</button>
-                <button class="btn btn-wander" data-state="wander">
-                    🚶 Wander
+                <button class="btn btn-idle no-drag" data-state="idle">Idle</button>
+                <button class="btn btn-wander no-drag" data-state="wander">
+                    Wander
                 </button>
-                <button class="btn btn-follow" data-state="follow">
-                    👆 Follow
+                <button class="btn btn-follow no-drag" data-state="follow">
+                    Follow
                 </button>
             </div>
             <div class="status">
                 <span class="status-label">Current State: </span>
                 <span class="status-value" id="currentState">—</span>
             </div>
-        </div>
+            <div style="height:20px"></div>
 
-        <div class="section">
             <h2>Actions</h2>
             <div class="button-grid">
-                <button class="btn btn-quote" id="quoteBtn">
-                    💬 Random Quote
+                <button class="btn btn-quote no-drag" id="quoteBtn">
+                    Random Quote
                 </button>
-                <button class="btn btn-dragin" data-state="imageDragIn">
-                    🖼️ Image Drag In
+                <button class="btn btn-dragin no-drag" data-state="imageDragIn">
+                    Image Drag In
                 </button>
-                <button class="btn btn-flagpole" data-state="flagPole">
-                    🚩 Flag Pole
+                <button class="btn btn-flagpole no-drag" data-state="flagPole">
+                    Morning Assembly
                 </button>
-                <button class="btn btn-otter" data-state="otterCrossing">
-                    🦦 Otter Crossing
+                <button class="btn btn-otter no-drag" data-state="otterCrossing">
+                    Otter Crossing
                 </button>
-                <button class="btn btn-interrupt" id="interruptBtn">
-                    ⏹️ Interrupt Action
+                <button class="btn btn-interrupt no-drag" id="interruptBtn">
+                    Interrupt Action
                 </button>
             </div>
         </div>
