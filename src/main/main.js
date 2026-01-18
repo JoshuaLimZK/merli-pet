@@ -146,6 +146,8 @@ ipcMain.on("start-drag", (_event, offset) => {
     // Transition to dragging state
     transitionToState("dragging", true, Infinity);
 
+    // play swinging animation
+
     const petWindow = getPetWindow();
     if (!petWindow) return;
 

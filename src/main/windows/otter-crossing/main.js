@@ -2,7 +2,7 @@ import { BrowserWindow, screen, ipcMain } from "electron";
 import { PET_WINDOW } from "../pet/config.js";
 import { petMoveTo } from "../../movement/main.js";
 import { transitionToState } from "../../state/petBehavior.js";
-import path from "path/win32";
+import path from "path";
 import { fileURLToPath } from "url";
 
 // Get __dirname equivalent in ES modules

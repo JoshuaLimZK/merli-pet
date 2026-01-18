@@ -11,7 +11,7 @@ body {
     position: relative;
     background: #ffffff;
     border: 4px solid #14214d; 
-    border-radius: 15px;
+    border-radius: 30px 30px 30px 0px ;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -23,34 +23,8 @@ body {
 }
 
 /* The "Tail" of the speech bubble */
-#quote-container::after {
-    content: '';
-    position: absolute;
-    bottom: -50px; /* Position below the container */
-    left: 15px;
-    
-    /* Creates the triangular shape */
-    width: 0;
-    height: 0;
-    border-left: 15px solid transparent;
-    border-right: 35px solid transparent;
-    border-top: 50px solid #14214d; /* Match the border color */
-}
 
 /* Inner triangle to make the tail hollow (white background) */
-#quote-container::before {
-    content: '';
-    position: absolute;
-    bottom: -42px;
-    left: 20px;
-    z-index: 1;
-    
-    width: 0;
-    height: 0;
-    border-left: 10px solid transparent;
-    border-right: 25px solid transparent;
-    border-top: 42px solid #ffffff; /* Match the container background */
-}
 
 #quote-mark {
     font-size: 2rem;
